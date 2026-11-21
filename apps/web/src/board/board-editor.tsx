@@ -995,8 +995,6 @@ function Toolbar(props: {
   onZoomOut: () => void;
   onFit: () => void;
 }) {
-  const isCircle = props.tool === 'shape' && props.shape === 'ellipse';
-  const isBox = props.tool === 'shape' && !isCircle;
   return (
     <div
       role="toolbar"
@@ -1021,23 +1019,15 @@ function Toolbar(props: {
       >
         <Pencil />
       </IconButton>
+      {/* One Shape tool; the options bar above picks box, circle, diamond… (icon shows the current one). */}
       <IconButton
-        label="Box: drag to draw, then type inside"
+        label="Shape: drag to draw, then type inside"
         shortcut="R"
         tooltipSide="top"
-        aria-pressed={isBox}
-        onClick={() => props.onShape('rectangle')}
+        aria-pressed={props.tool === 'shape'}
+        onClick={() => props.onShape(props.shape)}
       >
-        <Square />
-      </IconButton>
-      <IconButton
-        label="Circle: drag to draw, then type inside"
-        shortcut="O"
-        tooltipSide="top"
-        aria-pressed={isCircle}
-        onClick={() => props.onShape('ellipse')}
-      >
-        <Circle />
+        {SHAPE_OPTIONS.find(([kind]) => kind === props.shape)?.[2] ?? <Square />}
       </IconButton>
       <IconButton
         label="Text box: click to type"

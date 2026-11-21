@@ -207,7 +207,7 @@ Shown in the `?` panel, searchable. ⌘ = Ctrl on Windows/Linux.
 | Nudge / Big nudge | Arrows / ⇧Arrows |
 | Group / Ungroup | G (or ⌘G) / ⇧G |
 | Add sticky note | N |
-| Tools: select / pen / box / circle / text box | V / D / R / O / T (Esc returns to select) |
+| Tools: select / pen / shape / text box | V / D / R / T (O jumps straight to a circle; Esc returns to select) |
 | Toggle snap & guides | ⇧S |
 | Zoom in / out / 100% | ⌘= / ⌘- / ⌘0 |
 | Zoom to fit / to selection | ⇧1 / ⇧2 |

@@ -201,8 +201,7 @@ function BoardTips() {
   const tips: Array<[string, ReactNode]> = [
     ['Add a component', <Kbd key="k">/</Kbd>],
     ['Draw with the pen', <Kbd key="k">D</Kbd>],
-    ['Draw a box (type inside)', <Kbd key="k">R</Kbd>],
-    ['Draw a circle (type inside)', <Kbd key="k">O</Kbd>],
+    ['Draw a shape (type inside)', <Kbd key="k">R</Kbd>],
     ['Add text', <Kbd key="k">T</Kbd>],
     ['Group the selection', <Kbd key="k">G</Kbd>],
     ['Rename the selection', <Kbd key="k">Enter</Kbd>],
