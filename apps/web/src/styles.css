@@ -1,3 +1,79 @@
 @import '@archboard/ui/styles.css';
 
 @source './';
+
+/*
+ * React Flow theming with our tokens. Edges are calm graphite lines; async edges are dashed
+ * (UX §5.2); connection handles appear on hover/selection and get a 44px hit area on touch.
+ */
+.react-flow {
+  --xy-background-color: var(--canvas);
+  --xy-edge-stroke: var(--text-muted);
+  --xy-edge-stroke-selected: var(--accent);
+  --xy-edge-stroke-width: 1.5;
+  --xy-connectionline-stroke: var(--accent);
+  --xy-connectionline-stroke-width: 2;
+  --xy-selection-background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+  --xy-selection-border: 1px solid var(--accent);
+  --xy-minimap-background-color: var(--surface);
+  --xy-minimap-mask-background-color: color-mix(in srgb, var(--canvas) 70%, transparent);
+  --xy-node-boxshadow-selected: none;
+  --xy-edge-label-background-color: var(--surface);
+  --xy-edge-label-color: var(--text);
+  --xy-attribution-background-color: transparent;
+}
+
+.react-flow .react-flow__node-component,
+.react-flow .react-flow__node-note {
+  /* Our node components draw their own selection ring. */
+  outline: none;
+}
+
+.react-flow .ab-edge-async path.react-flow__edge-path {
+  stroke-dasharray: 6 5;
+}
+
+.react-flow .react-flow__edge-textbg {
+  rx: 4;
+}
+
+.react-flow .react-flow__edge-text {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Connection handles: 10px dots, hidden until the node is hovered or selected. */
+.react-flow .ab-handle {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--surface);
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity var(--dur-1) var(--ease-out);
+}
+.react-flow .react-flow__node:hover .ab-handle,
+.react-flow .react-flow__node.selected .ab-handle,
+.react-flow.ab-connecting .ab-handle,
+.react-flow .ab-handle.connectingto {
+  opacity: 1;
+}
+/* Generous invisible hit area so handles are easy to grab. */
+.react-flow .ab-handle::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 9999px;
+}
+@media (pointer: coarse) {
+  .react-flow .ab-handle::after {
+    inset: -17px;
+  }
+  .react-flow .react-flow__node.selected .ab-handle {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.react-flow .react-flow__minimap {
+  overflow: hidden;
+}

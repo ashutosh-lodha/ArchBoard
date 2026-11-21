@@ -31,9 +31,10 @@ for (const { path, heading } of pages) {
   });
 }
 
-test('home page links to the design system in development', async ({ page }) => {
+test('home page "Start a board" opens a fresh board', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Open the design system' }).click();
-  await expect(page).toHaveURL(/\/dev\/ui$/);
-  await expect(page.getByRole('heading', { name: 'ArchBoard design system' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /design system/i })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Start a board' }).click();
+  await expect(page).toHaveURL(/\/b\/local-[a-z0-9]{12}$/);
+  await expect(page.getByText('Start your design')).toBeVisible();
 });

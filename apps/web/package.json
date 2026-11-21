@@ -15,10 +15,14 @@
     "@archboard/diagram-schema": "workspace:*",
     "@archboard/icons": "workspace:*",
     "@archboard/ui": "workspace:*",
+    "@xyflow/react": "12.12.1",
     "lucide-react": "1.77.0",
+    "nanoid": "6.0.2",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "react-router": "8.5.2"
+    "react-router": "8.5.2",
+    "y-indexeddb": "9.0.12",
+    "yjs": "13.6.33"
   },
   "devDependencies": {
     "@archboard/config": "workspace:*",

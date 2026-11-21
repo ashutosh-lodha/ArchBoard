@@ -145,22 +145,35 @@ export function AvatarStack({
 // ---------------------------------------------------------------------------------------------
 // Toasts (sonner), themed with our tokens. Bottom-centre on desktop, top on phones (UX §8).
 
-export function Toaster() {
+export function Toaster({
+  theme = 'system',
+  bottomOffset = 24,
+}: {
+  theme?: 'light' | 'dark' | 'system';
+  /** Lift toasts above floating toolbars (the board passes ~72px). */
+  bottomOffset?: number;
+}) {
   return (
     <SonnerToaster
+      theme={theme}
       position="bottom-center"
+      offset={{ bottom: bottomOffset }}
       mobileOffset={{ top: 12 }}
       visibleToasts={3}
       gap={8}
       toastOptions={{
         duration: 4000,
+        // Unstyled: our token classes below are the only styles, so both themes match the app.
+        unstyled: true,
         classNames: {
           toast:
-            'group flex w-full items-center gap-3 rounded-lg border border-border bg-surface-raised px-3 py-2.5 text-base text-text shadow-e2',
+            'group flex w-[min(380px,calc(100vw-32px))] items-center gap-3 rounded-lg border border-border bg-surface-raised px-3 py-2.5 text-base text-text shadow-e2',
+          title: 'flex-1',
           description: 'text-text-muted',
-          actionButton: '!bg-transparent !text-accent !font-semibold hover:!underline',
-          cancelButton: '!bg-transparent !text-text-muted',
-          error: '!border-danger/40',
+          actionButton:
+            'rounded-md px-2 py-1 font-semibold text-accent hover:bg-accent-subtle focus-visible:outline-2',
+          cancelButton: 'rounded-md px-2 py-1 text-text-muted hover:bg-surface-hover',
+          error: 'border-danger/40',
         },
       }}
     />
@@ -170,8 +183,8 @@ export function Toaster() {
 export { toast };
 
 /** "Deleted 3 items · Undo" — 10 s, per UX §8. */
-export function undoToast(message: string, onUndo: () => void): void {
-  toast(message, { duration: 10_000, action: { label: 'Undo', onClick: onUndo } });
+export function undoToast(message: string, onUndo: () => void): string | number {
+  return toast(message, { duration: 10_000, action: { label: 'Undo', onClick: onUndo } });
 }
 
 // ---------------------------------------------------------------------------------------------

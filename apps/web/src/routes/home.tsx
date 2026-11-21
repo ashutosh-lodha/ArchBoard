@@ -2,8 +2,8 @@ import { Badge, Button } from '@archboard/ui';
 import { Link } from 'react-router';
 
 /**
- * Placeholder home page for Phase 1. The real landing page (live demo board, prerendered,
- * OG image) is built in Phase 5; the editor arrives in Phase 2.
+ * Placeholder home page. The real landing page (live demo board, prerendered, OG image) is
+ * built in Phase 5.
  */
 export function HomePage() {
   return (
@@ -20,15 +20,11 @@ export function HomePage() {
         Draw architectures with real AWS, Google Cloud and Azure icons. Pass the pen, run the
         interview timer, and replay how the design evolved.
       </p>
-      <div className="flex flex-wrap gap-3">
-        <Button variant="primary" size="lg" disabled>
-          Start a board (coming in Phase 2)
+      <div className="flex flex-wrap items-center gap-3">
+        <Button asChild variant="primary" size="lg">
+          <Link to="/new">Start a board</Link>
         </Button>
-        {import.meta.env.DEV ? (
-          <Button asChild size="lg">
-            <Link to="/dev/ui">Open the design system</Link>
-          </Button>
-        ) : null}
+        <span className="text-sm text-text-muted">No sign-up needed to try.</span>
       </div>
     </main>
   );

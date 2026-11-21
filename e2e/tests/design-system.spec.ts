@@ -90,7 +90,9 @@ test('disabled icon buttons explain why on focus', async ({ page, isMobile }) =>
     .getByRole('button', { name: 'Add sticky note' });
   await expect(noteButton).toHaveAttribute('aria-disabled', 'true');
   await noteButton.focus();
-  await expect(page.getByRole('tooltip').first()).toContainText('Only the presenter can edit');
+  await expect(
+    page.getByRole('tooltip').filter({ hasText: 'Only the presenter can edit' }).first(),
+  ).toBeAttached();
 });
 
 test('theme toggle switches the root theme and persists across reloads', async ({ page }) => {
