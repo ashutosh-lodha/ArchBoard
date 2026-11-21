@@ -12,6 +12,21 @@ REGION=asia-south1
 BUCKET="${PROJECT}-tfstate"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
+# Cloud Shell doesn't always ship Terraform: install the pinned version, checksum-verified.
+TF_VERSION=1.14.8
+if ! command -v terraform >/dev/null 2>&1 || ! terraform version | grep -q "v$TF_VERSION"; then
+  BIN="$HOME/.local/bin"
+  TMP="$(mktemp -d)"
+  mkdir -p "$BIN"
+  base="https://releases.hashicorp.com/terraform/$TF_VERSION"
+  curl -fsSLo "$TMP/terraform_${TF_VERSION}_linux_amd64.zip" "$base/terraform_${TF_VERSION}_linux_amd64.zip"
+  curl -fsSLo "$TMP/SHA256SUMS" "$base/terraform_${TF_VERSION}_SHA256SUMS"
+  (cd "$TMP" && grep "linux_amd64.zip" SHA256SUMS | sha256sum -c -)
+  unzip -o -q "$TMP/terraform_${TF_VERSION}_linux_amd64.zip" -d "$BIN"
+  export PATH="$BIN:$PATH"
+fi
+terraform version | head -n 1
+
 gcloud config set project "$PROJECT" >/dev/null
 gcloud services enable storage.googleapis.com compute.googleapis.com iam.googleapis.com \
   cloudresourcemanager.googleapis.com
