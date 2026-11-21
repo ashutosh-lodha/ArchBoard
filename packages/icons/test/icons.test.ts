@@ -168,6 +168,14 @@ describe('vendor file normalisation', () => {
   });
 
   it('Google Cloud: strips size/colour suffixes', () => {
+    expect(normaliseGcp('Unique Icons/Cloud Run/SVG/CloudRun-512-color-rgb.svg')).toMatchObject({
+      slug: 'cloud-run',
+      label: 'Cloud Run',
+    });
+    expect(normaliseGcp('pubsub/pubsub.svg')?.label).toBe('Pub/Sub');
+    expect(normaliseGcp('google_kubernetes_engine/google_kubernetes_engine.svg')?.label).toBe(
+      'Google Kubernetes Engine',
+    );
     expect(normaliseGcp('core-products/Cloud_Run/SVG/Cloud_Run-512-color.svg')).toMatchObject({
       slug: 'cloud-run',
       label: 'Cloud Run',

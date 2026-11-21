@@ -1,9 +1,9 @@
 import {
+  fromYMap,
   sortParentsFirst,
   type DiagramDoc,
   type DiagramEdge,
   type DiagramNode,
-  fromYMap,
 } from '@archboard/diagram-schema';
 import { MarkerType, type Edge, type Node } from '@xyflow/react';
 
@@ -22,8 +22,26 @@ export type ComponentNodeData = {
 export type NoteNodeData = { kind: 'note'; text: string; color: string };
 export type GroupNodeData = { kind: 'group'; label: string; groupType: string };
 export type TextNodeData = { kind: 'text'; text: string; fontSize: string };
-export type FlowNodeData = ComponentNodeData | NoteNodeData | GroupNodeData | TextNodeData;
+export type ShapeNodeData = { kind: 'shape'; shape: string; text: string; fill: string };
+export type DrawingNodeData = {
+  kind: 'drawing';
+  points: Array<[number, number]>;
+  color: string;
+  strokeWidth: number;
+  width: number;
+  height: number;
+};
+export type FlowNodeData =
+  ComponentNodeData | NoteNodeData | GroupNodeData | TextNodeData | ShapeNodeData | DrawingNodeData;
 export type FlowNode = Node<FlowNodeData>;
+
+export const PROTOCOL_LABELS: Record<string, string> = {
+  http: 'HTTP',
+  grpc: 'gRPC',
+  websocket: 'WebSocket',
+  tcp: 'TCP',
+  pubsub: 'Pub/Sub',
+};
 
 function toFlowNode(n: DiagramNode): FlowNode {
   const base = {
@@ -58,6 +76,7 @@ function toFlowNode(n: DiagramNode): FlowNode {
         type: 'group',
         style: { width: n.size.width, height: n.size.height },
         data: { kind: 'group', label: n.label, groupType: n.groupType },
+        // Containers always sit behind their contents.
         zIndex: n.zIndex ?? -1,
       };
     case 'text':
@@ -66,11 +85,35 @@ function toFlowNode(n: DiagramNode): FlowNode {
         type: 'text',
         data: { kind: 'text', text: n.text, fontSize: n.fontSize ?? 'm' },
       };
+    case 'shape':
+      return {
+        ...base,
+        type: 'shape',
+        style: { width: n.size.width, height: n.size.height },
+        data: { kind: 'shape', shape: n.shape, text: n.text ?? '', fill: n.fill ?? 'none' },
+      };
+    case 'drawing':
+      return {
+        ...base,
+        type: 'drawing',
+        style: { width: n.size.width, height: n.size.height },
+        data: {
+          kind: 'drawing',
+          points: n.points,
+          color: n.color ?? 'ink',
+          strokeWidth: n.strokeWidth ?? 2.5,
+          width: n.size.width,
+          height: n.size.height,
+        },
+      };
   }
 }
 
 function toFlowEdge(e: DiagramEdge): Edge {
   const arrow = e.arrow ?? 'end';
+  const protocol = e.protocol ? PROTOCOL_LABELS[e.protocol] : undefined;
+  const label = [e.label, protocol].filter(Boolean).join(' · ');
+  const marker = { type: MarkerType.ArrowClosed, width: 18, height: 18 };
   return {
     id: e.id,
     source: e.source,
@@ -78,14 +121,13 @@ function toFlowEdge(e: DiagramEdge): Edge {
     ...(e.sourceHandle ? { sourceHandle: e.sourceHandle } : {}),
     ...(e.targetHandle ? { targetHandle: e.targetHandle } : {}),
     type: 'smoothstep',
-    ...(e.label ? { label: e.label } : {}),
-    ...(arrow !== 'none'
-      ? { markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 } }
-      : {}),
-    ...(arrow === 'both'
-      ? { markerStart: { type: MarkerType.ArrowClosed, width: 18, height: 18 } }
-      : {}),
+    ...(label ? { label } : {}),
+    labelBgPadding: [6, 3] as [number, number],
+    labelBgBorderRadius: 4,
+    ...(arrow !== 'none' ? { markerEnd: marker } : {}),
+    ...(arrow === 'both' ? { markerStart: marker } : {}),
     className: e.style === 'async' ? 'ab-edge-async' : 'ab-edge-sync',
+    interactionWidth: 24,
     data: { style: e.style ?? 'sync', protocol: e.protocol },
   };
 }

@@ -30,3 +30,17 @@
 - Renamed the package script to `import-packs`, because `pnpm import` is a built-in pnpm command and silently shadowed it. `pnpm icons:import` works again.
 - New tests against the real registry: unique ids, every SVG present, and search finds S3, SQS, Lambda, DynamoDB, Azure Load Balancers, Kubernetes and VMs, with the generic blocks still ranked first. 42 icon tests in total.
 - The design-system gallery shows a sample of provider icons, for visual checks.
+
+## Phase 2 (in progress)
+
+### Slice 1: whiteboard with component panel
+Local boards with IndexedDB autosave; a component panel (search, aliases, provider tabs, recents, click or drag); connections, rename, delete with per-delete undo, keyboard shortcuts; phone/tablet sheets.
+
+### Slice 2: properties, groups, drawing tools, Google Cloud
+- Contextual properties panel and tradeoff hint cards for all 21 generic components.
+- Groups (6 container types): G menu, drag in/out, resize, ungroup; align and distribute.
+- Connection labels, sync/async styles, protocol tags (HTTP, gRPC, WebSocket, TCP, Pub/Sub), arrow options.
+- Diagram schema v1 gains `shape` and `drawing` node kinds (still format version 1; additive). Pen, shape and text-box tools.
+- Google Cloud icons: 2025 core + legacy packs (226), with multi-pack support in the importer. The registry now has 1,193 icons.
+- Fixes: frozen recents order, Shift-click multi-select, text-box focus, no unexpected zoom on first add, atomic icon build.
+- Tests: 8 new e2e scenarios (groups, drag in/out, properties, connections, pen, shapes, text, GCP); 60 e2e checks pass.

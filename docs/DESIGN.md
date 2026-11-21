@@ -12,7 +12,7 @@ This document is the engineering source of truth. UX decisions live in [UX.md](U
 
 **Non-goals for MVP:**
 - Simultaneous multi-editor editing (pass-the-pen is a deliberate product choice, see ADR-002).
-- Native mobile apps, offline-first *multi-user* boards, freehand drawing, video/voice.
+- Native mobile apps, offline-first *multi-user* boards, video/voice. (Freehand pen drawing, basic shapes and text boxes were added on request in Phase 2 — see §4: `shape` and `drawing` node kinds.)
 - Running on anything other than a single VM (but stay 12-factor so Cloud Run/GKE is a lift, not a rewrite).
 
 ---

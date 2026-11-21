@@ -92,14 +92,14 @@ function topLevelRects(
 export function addNode(
   d: DiagramDoc,
   input: NewNode,
-  options: OpOptions & { at?: Point; avoidOverlap?: boolean } = {},
+  options: OpOptions & { at?: Point; avoidOverlap?: boolean; snap?: boolean } = {},
 ): string {
   const newId = options.newId ?? defaultNewId;
   const nodes = readNodes(d);
   const id = newId();
   const desired = options.at ?? input.position ?? { x: 0, y: 0 };
   const draft = { ...input, id, position: desired } as DiagramNode;
-  let position = { x: snap(desired.x), y: snap(desired.y) };
+  let position = options.snap === false ? desired : { x: snap(desired.x), y: snap(desired.y) };
   if ((options.avoidOverlap ?? true) && draft.parentId === undefined) {
     position = findFreeSpot(topLevelRects(nodes, options.measure), desired, nodeSize(draft));
   }

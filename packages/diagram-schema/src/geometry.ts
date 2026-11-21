@@ -24,6 +24,8 @@ export function nodeSize(node: DiagramNode, measure?: Measure): Size {
   switch (node.kind) {
     case 'group':
     case 'note':
+    case 'shape':
+    case 'drawing':
       return node.size;
     case 'text':
       return DEFAULT_TEXT_SIZE;

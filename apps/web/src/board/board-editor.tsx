@@ -1,17 +1,29 @@
 import {
   addNode,
+  align,
   autoName,
   connect,
   DEFAULT_COMPONENT_SIZE,
   DEFAULT_NOTE_SIZE,
   deleteElements,
+  distribute,
+  GROUP_LABELS,
+  groupNodes,
+  reparent,
+  ungroup,
+  type AlignMode,
   type DiagramDoc,
+  type GroupType,
+  type InkColor,
+  type ShapeKind,
 } from '@archboard/diagram-schema';
 import type { IconEntry } from '@archboard/icons';
 import {
   Button,
+  cn,
   IconButton,
   Kbd,
+  SegmentedControl,
   Sheet,
   SheetContent,
   StatusPill,
@@ -36,11 +48,40 @@ import {
   type NodeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Maximize, Minus, Plus, Redo2, StickyNote, Undo2 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import {
+  Circle,
+  Cylinder,
+  Diamond,
+  Hexagon,
+  Maximize,
+  Minus,
+  MousePointer2,
+  PanelLeft,
+  PanelRight,
+  Pencil,
+  Plus,
+  Redo2,
+  RectangleHorizontal,
+  SlidersHorizontal,
+  Square,
+  StickyNote,
+  Type,
+  Undo2,
+} from 'lucide-react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+  type ReactNode,
+} from 'react';
 import { Link } from 'react-router';
 import { BoardContext } from './context.ts';
-import { nodeTypes } from './nodes.tsx';
+import { INK_COLOURS, nodeTypes } from './nodes.tsx';
+import { GROUP_TYPES, PropertiesPanel, STROKE_OPTIONS } from './properties-panel.tsx';
+import { ToolOverlay, type Tool, type ToolSettings } from './tool-overlay.tsx';
 import { ICON_DRAG_TYPE, Palette, pushRecent } from './palette.tsx';
 import { project, type FlowNode, type Projection } from './projection.ts';
 import { GENERIC_REGISTRY, loadRegistry, type LoadedRegistry } from './registry.ts';
@@ -125,10 +166,34 @@ function Editor({ board }: { board: BoardDoc }) {
   const [edges, setEdges] = useState<Edge[]>([]);
   const selectNext = useRef<string | null>(null);
   const revealRef = useRef<(position: { x: number; y: number }) => void>(() => undefined);
+  // Only components added from the panel are revealed; things drawn on the canvas are already
+  // where the user is looking.
+  const revealNext = useRef(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [propertiesOpen, setPropertiesOpen] = useState(false); // tablet/phone sheet
+  const [leftOpen, setLeftOpen] = useState(true); // desktop panels, collapsible with [ and ]
+  // On laptop widths both panels would squeeze the canvas, so properties start closed there.
+  const [rightOpen, setRightOpen] = useState(() => window.innerWidth >= 1280);
+  const [groupMenuOpen, setGroupMenuOpen] = useState(false);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const [tool, setTool] = useState<Tool>('select');
+  const [toolSettings, setToolSettings] = useState<ToolSettings>({
+    shape: 'rectangle',
+    ink: 'ink',
+    strokeWidth: 2.5,
+  });
   const canvasRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  // The minimap only fits beside the toolbar on a wide enough canvas.
+  const [canvasWidth, setCanvasWidth] = useState(1200);
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setCanvasWidth(entry?.contentRect.width ?? 1200));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Merge each new projection with local-only state: selection and React Flow's measurements.
   useEffect(() => {
@@ -139,7 +204,10 @@ function Editor({ board }: { board: BoardDoc }) {
       selectNext.current = null;
       const added = projection.nodes.find((n) => n.id === select);
       // Wait a frame so React Flow has the node, then make sure the user can see it.
-      if (added && !added.parentId) requestAnimationFrame(() => revealRef.current(added.position));
+      if (added && !added.parentId && revealNext.current) {
+        requestAnimationFrame(() => revealRef.current(added.position));
+      }
+      revealNext.current = false;
     }
     setNodes((prev) => {
       const prevById = new Map(prev.map((n) => [n.id, n]));
@@ -161,13 +229,18 @@ function Editor({ board }: { board: BoardDoc }) {
     if (appeared.length) requestAnimationFrame(() => updateNodeInternals(appeared));
   }, [projection, updateNodeInternals]);
 
-  // Fit the existing diagram into view once, when the stored board first loads.
+  // Fit the stored diagram into view once, on open — only if the board already had content.
+  // (Adding the first item to an empty board must never move the view.)
   const fitted = useRef(false);
   useEffect(() => {
-    if (!board.ready || fitted.current || nodes.length === 0) return;
+    if (!board.ready || fitted.current) return;
     fitted.current = true;
-    requestAnimationFrame(() => void rf.fitView({ padding: 0.2, maxZoom: 1 }));
-  }, [board.ready, nodes.length, rf]);
+    if (diagram.nodes.size === 0) return;
+    // Two frames: one for the projection to reach React Flow, one for it to measure the nodes.
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => void rf.fitView({ padding: 0.2, maxZoom: 1 })),
+    );
+  }, [board.ready, diagram, rf]);
 
   const [history, setHistory] = useState({ canUndo: false, canRedo: false });
   useEffect(() => {
@@ -202,6 +275,16 @@ function Editor({ board }: { board: BoardDoc }) {
    * way, addNode nudges it to the nearest free spot so nothing overlaps.
    */
   const clickTarget = useCallback(() => {
+    // A component added a moment ago may not be selected on screen yet (fast double-adds):
+    // chain from it anyway, using its position in the document.
+    const pending = selectNext.current ? diagram.nodes.get(selectNext.current) : undefined;
+    const pendingPos = pending?.get('position') as { x: number; y: number } | undefined;
+    if (pending && pendingPos && !pending.get('parentId')) {
+      return {
+        x: pendingPos.x + DEFAULT_COMPONENT_SIZE.width + 80 + DEFAULT_COMPONENT_SIZE.width / 2,
+        y: pendingPos.y + DEFAULT_COMPONENT_SIZE.height / 2,
+      };
+    }
     const selected = rf.getNodes().filter((n) => n.selected);
     const only = selected.length === 1 ? selected[0] : undefined;
     if (only && !only.parentId) {
@@ -213,7 +296,7 @@ function Editor({ board }: { board: BoardDoc }) {
       };
     }
     return viewportCentre();
-  }, [rf, viewportCentre]);
+  }, [diagram, rf, viewportCentre]);
 
   /** Add a component centred on `at` (flow coordinates). Click-adds avoid overlapping others. */
   const addComponent = useCallback(
@@ -234,6 +317,7 @@ function Editor({ board }: { board: BoardDoc }) {
         },
       );
       selectNext.current = id;
+      revealNext.current = true;
       setPaletteOpen(false);
     },
     [clickTarget, diagram, labels],
@@ -298,17 +382,170 @@ function Editor({ board }: { board: BoardDoc }) {
     );
   }, []);
 
+  /** Real rendered sizes, so grouping/aligning uses what's on screen rather than defaults. */
+  const measure = useCallback(
+    (id: string) => {
+      const m = rf.getInternalNode(id)?.measured;
+      return m?.width && m?.height ? { width: m.width, height: m.height } : undefined;
+    },
+    [rf],
+  );
+
+  /**
+   * The group a dragged node would land in: the smallest group containing the node's centre,
+   * ignoring the dragged nodes themselves and anything inside them (no dropping into yourself).
+   */
+  const findDropTarget = useCallback(
+    (dragged: FlowNode[]): string | null => {
+      const draggedIds = new Set(dragged.map((n) => n.id));
+      const all = rf.getNodes();
+      const isInsideDragged = (id: string | undefined): boolean => {
+        let current = id;
+        let guard = 0;
+        while (current && guard++ < 50) {
+          if (draggedIds.has(current)) return true;
+          current = all.find((n) => n.id === current)?.parentId;
+        }
+        return false;
+      };
+      const primary = dragged[0];
+      if (!primary) return null;
+      const internal = rf.getInternalNode(primary.id);
+      if (!internal) return null;
+      const abs = internal.internals.positionAbsolute;
+      const cx = abs.x + (internal.measured.width ?? 0) / 2;
+      const cy = abs.y + (internal.measured.height ?? 0) / 2;
+      let best: { id: string; area: number } | null = null;
+      for (const g of all) {
+        if (g.type !== 'group' || draggedIds.has(g.id) || isInsideDragged(g.id)) continue;
+        const gi = rf.getInternalNode(g.id);
+        if (!gi) continue;
+        const p = gi.internals.positionAbsolute;
+        const w = gi.measured.width ?? 0;
+        const h = gi.measured.height ?? 0;
+        if (
+          cx >= p.x &&
+          cx <= p.x + w &&
+          cy >= p.y &&
+          cy <= p.y + h &&
+          (!best || w * h < best.area)
+        ) {
+          best = { id: g.id, area: w * h };
+        }
+      }
+      return best?.id ?? null;
+    },
+    [rf],
+  );
+
+  const onNodeDrag = useCallback(
+    (_e: unknown, _node: FlowNode, dragged: FlowNode[]) => {
+      const target = findDropTarget(dragged);
+      const current = dragged[0]?.parentId ?? null;
+      setDropTargetId(target !== current ? target : null);
+    },
+    [findDropTarget],
+  );
+
   const onNodeDragStop = useCallback(
     (_e: unknown, _node: FlowNode, dragged: FlowNode[]) => {
+      setDropTargetId(null);
+      const draggedIds = new Set(dragged.map((n) => n.id));
+      const moves = dragged.map((n) => ({ node: n, target: findDropTarget([n]) }));
+      let movedIn: string | null = null;
       diagram.doc.transact(() => {
-        for (const n of dragged)
+        for (const { node } of moves) {
           diagram.nodes
-            .get(n.id)
-            ?.set('position', { x: Math.round(n.position.x), y: Math.round(n.position.y) });
+            .get(node.id)
+            ?.set('position', { x: Math.round(node.position.x), y: Math.round(node.position.y) });
+        }
+        // Re-parent in the same transaction (one undo step). Children of dragged groups move
+        // with their group, so only reconsider nodes whose parent wasn't also dragged.
+        for (const { node, target } of moves) {
+          if (node.parentId && draggedIds.has(node.parentId)) continue;
+          const current = node.parentId ?? null;
+          if (target !== current && reparent(diagram, node.id, target ?? undefined)) {
+            if (target) movedIn = target;
+          }
+        }
       }, LOCAL_ORIGIN);
+      if (movedIn) {
+        const group = diagram.nodes.get(movedIn);
+        if (group) toast(`Moved into ${String(group.get('label') || 'group')}`);
+      }
     },
-    [diagram],
+    [diagram, findDropTarget],
   );
+
+  const selectOnly = useCallback((ids: string[]) => {
+    const set = new Set(ids);
+    setNodes((nds) =>
+      nds.map((n) => (set.has(n.id) !== !!n.selected ? { ...n, selected: set.has(n.id) } : n)),
+    );
+    setEdges((eds) => eds.map((e) => (e.selected ? { ...e, selected: false } : e)));
+  }, []);
+
+  const groupSelection = useCallback(
+    (type: GroupType) => {
+      setGroupMenuOpen(false);
+      const ids = rf
+        .getNodes()
+        .filter((n) => n.selected)
+        .map((n) => n.id);
+      if (ids.length === 0) {
+        toast('Select one or more items to group them.');
+        return;
+      }
+      const id = groupNodes(diagram, ids, type, { origin: LOCAL_ORIGIN, measure });
+      if (!id) {
+        toast('Select items that are in the same container to group them.');
+        return;
+      }
+      selectNext.current = id;
+    },
+    [diagram, measure, rf],
+  );
+
+  const ungroupNode = useCallback(
+    (groupId: string) => {
+      const children = ungroup(diagram, groupId, { origin: LOCAL_ORIGIN });
+      requestAnimationFrame(() => selectOnly(children));
+    },
+    [diagram, selectOnly],
+  );
+
+  const alignSelection = useCallback(
+    (mode: AlignMode) => {
+      const ids = rf
+        .getNodes()
+        .filter((n) => n.selected)
+        .map((n) => n.id);
+      align(diagram, ids, mode, { origin: LOCAL_ORIGIN, measure });
+    },
+    [diagram, measure, rf],
+  );
+
+  const distributeSelection = useCallback(
+    (axis: 'horizontal' | 'vertical') => {
+      const ids = rf
+        .getNodes()
+        .filter((n) => n.selected)
+        .map((n) => n.id);
+      distribute(diagram, ids, axis, { origin: LOCAL_ORIGIN, measure });
+    },
+    [diagram, measure, rf],
+  );
+
+  /** A drawing tool created something: select it (and start typing for text). */
+  const onToolCreated = useCallback((id: string, opts: { edit: boolean; keepTool: boolean }) => {
+    // While the pen stays active, don't select each stroke (the outline would get in the way).
+    if (!opts.keepTool) selectNext.current = id;
+    if (opts.edit) setEditingId(id);
+    // Switch back to Select one tick later: the browser still fires `click` for this press, and
+    // if the overlay were already gone it would land on the canvas, deselect, and steal focus
+    // from the new text box.
+    if (!opts.keepTool) setTimeout(() => setTool('select'), 0);
+  }, []);
 
   const onConnect = useCallback(
     (c: Connection) => {
@@ -401,12 +638,41 @@ function Editor({ board }: { board: BoardDoc }) {
       } else if (!mod && (e.key === 'Delete' || e.key === 'Backspace')) {
         e.preventDefault();
         deleteSelection();
+      } else if (e.key === 'Escape') {
+        // Esc backs out one level: group menu → drawing tool → selection.
+        if (groupMenuOpen) setGroupMenuOpen(false);
+        else if (tool !== 'select') setTool('select');
+        else selectOnly([]);
+      } else if (groupMenuOpen && /^[1-6]$/.test(e.key)) {
+        e.preventDefault();
+        groupSelection(GROUP_TYPES[Number(e.key) - 1] as GroupType);
       } else if (!mod && key === 'n') {
         e.preventDefault();
         addNote();
+      } else if (!mod && key === 'v') {
+        setTool('select');
+      } else if (!mod && key === 'd') {
+        setTool('pen');
+      } else if (!mod && key === 'r') {
+        setTool('shape');
+      } else if (!mod && key === 't') {
+        setTool('text');
+      } else if (key === 'g' && e.shiftKey) {
+        e.preventDefault();
+        const group = rf.getNodes().find((n) => n.selected && n.type === 'group');
+        if (group) ungroupNode(group.id);
+        else toast('Select a group to ungroup it.');
+      } else if (key === 'g') {
+        e.preventDefault();
+        if (rf.getNodes().some((n) => n.selected)) setGroupMenuOpen(true);
+        else toast('Select one or more items to group them.');
+      } else if (!mod && e.key === '[') {
+        setLeftOpen((o) => !o);
+      } else if (!mod && e.key === ']') {
+        setRightOpen((o) => !o);
       } else if (!mod && (e.key === 'Enter' || e.key === 'F2')) {
         const selected = rf.getNodes().filter((n) => n.selected);
-        if (selected.length === 1 && selected[0]) {
+        if (selected.length === 1 && selected[0] && selected[0].type !== 'drawing') {
           e.preventDefault();
           setEditingId(selected[0].id);
         }
@@ -414,11 +680,37 @@ function Editor({ board }: { board: BoardDoc }) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [addNote, deleteSelection, isDesktop, rf, undo]);
+  }, [
+    addNote,
+    deleteSelection,
+    groupMenuOpen,
+    groupSelection,
+    isDesktop,
+    rf,
+    selectOnly,
+    tool,
+    undo,
+    ungroupNode,
+  ]);
 
   const context = useMemo(
-    () => ({ diagram, registry, editingId, setEditingId }),
-    [diagram, registry, editingId],
+    () => ({ diagram, registry, editingId, setEditingId, dropTargetId }),
+    [diagram, registry, editingId, dropTargetId],
+  );
+  const selectedNodeIds = useMemo(() => nodes.filter((n) => n.selected).map((n) => n.id), [nodes]);
+  const selectedEdgeIds = useMemo(() => edges.filter((e) => e.selected).map((e) => e.id), [edges]);
+  const properties = (
+    <PropertiesPanel
+      diagram={diagram}
+      registry={registry}
+      selectedNodeIds={selectedNodeIds}
+      selectedEdgeIds={selectedEdgeIds}
+      onGroup={groupSelection}
+      onUngroup={ungroupNode}
+      onAlign={alignSelection}
+      onDistribute={distributeSelection}
+      onDelete={deleteSelection}
+    />
   );
   const palette = (
     <Palette
@@ -429,14 +721,41 @@ function Editor({ board }: { board: BoardDoc }) {
       className="h-full"
     />
   );
-  const empty = board.ready && nodes.length === 0;
+  const empty = board.ready && nodes.length === 0 && tool === 'select';
+  const hasSelection = selectedNodeIds.length + selectedEdgeIds.length > 0;
 
   return (
     <BoardContext.Provider value={context}>
       <div className="flex h-dvh flex-col bg-canvas">
-        <BoardHeader diagram={diagram} saved={board.saved} persistent={board.persistent} />
+        <BoardHeader
+          diagram={diagram}
+          saved={board.saved}
+          persistent={board.persistent}
+          panelToggles={
+            isDesktop ? (
+              <>
+                <IconButton
+                  label={leftOpen ? 'Hide components panel' : 'Show components panel'}
+                  shortcut="["
+                  aria-pressed={leftOpen}
+                  onClick={() => setLeftOpen((o) => !o)}
+                >
+                  <PanelLeft />
+                </IconButton>
+                <IconButton
+                  label={rightOpen ? 'Hide properties panel' : 'Show properties panel'}
+                  shortcut="]"
+                  aria-pressed={rightOpen}
+                  onClick={() => setRightOpen((o) => !o)}
+                >
+                  <PanelRight />
+                </IconButton>
+              </>
+            ) : null
+          }
+        />
         <div className="relative flex min-h-0 flex-1">
-          {isDesktop ? (
+          {isDesktop && leftOpen ? (
             <aside
               aria-label="Components"
               className="w-[264px] shrink-0 border-r border-border bg-bg"
@@ -457,10 +776,13 @@ function Editor({ board }: { board: BoardDoc }) {
               nodeTypes={nodeTypes}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
+              onNodeDrag={onNodeDrag}
               onNodeDragStop={onNodeDragStop}
               onConnect={onConnect}
               connectionMode={ConnectionMode.Loose}
               deleteKeyCode={null}
+              // UX §5.3: Shift-click adds to the selection (Ctrl/⌘ work too).
+              multiSelectionKeyCode={['Shift', 'Meta', 'Control']}
               snapToGrid
               snapGrid={[8, 8]}
               minZoom={0.1}
@@ -479,7 +801,7 @@ function Editor({ board }: { board: BoardDoc }) {
                 size={1.25}
                 color="var(--canvas-dot)"
               />
-              {!isPhone ? (
+              {canvasWidth >= 760 ? (
                 <MiniMap
                   pannable
                   zoomable
@@ -492,7 +814,31 @@ function Editor({ board }: { board: BoardDoc }) {
               <EmptyHint registry={registry} onAdd={(e) => addComponent(e)} isDesktop={isDesktop} />
             ) : null}
 
+            {tool !== 'select' ? (
+              <ToolOverlay
+                tool={tool}
+                settings={toolSettings}
+                diagram={diagram}
+                onCreated={onToolCreated}
+              />
+            ) : null}
+
+            {tool === 'pen' || tool === 'shape' ? (
+              <ToolOptions
+                tool={tool}
+                settings={toolSettings}
+                onChange={setToolSettings}
+                onDone={() => setTool('select')}
+              />
+            ) : null}
+
+            {groupMenuOpen ? (
+              <GroupMenu onPick={groupSelection} onClose={() => setGroupMenuOpen(false)} />
+            ) : null}
+
             <Toolbar
+              tool={tool}
+              onTool={setTool}
               canUndo={history.canUndo}
               canRedo={history.canRedo}
               onUndo={() => undo.undo()}
@@ -504,17 +850,49 @@ function Editor({ board }: { board: BoardDoc }) {
             />
 
             {!isDesktop ? (
-              <Button
-                variant="primary"
-                size="touch"
-                className="absolute left-4 top-4 z-10 shadow-e2"
-                onClick={() => setPaletteOpen(true)}
-              >
-                <Plus /> Add component
-              </Button>
+              <div className="absolute left-4 right-4 top-4 z-10 flex items-start justify-between gap-2">
+                <Button
+                  variant="primary"
+                  size="touch"
+                  className="shadow-e2"
+                  onClick={() => setPaletteOpen(true)}
+                >
+                  <Plus /> Add component
+                </Button>
+                {hasSelection ? (
+                  <Button
+                    size="touch"
+                    className="shadow-e2"
+                    onClick={() => setPropertiesOpen(true)}
+                  >
+                    <SlidersHorizontal /> Properties
+                  </Button>
+                ) : null}
+              </div>
             ) : null}
           </div>
+
+          {isDesktop && rightOpen ? (
+            <aside
+              aria-label="Properties"
+              className="w-[296px] shrink-0 border-l border-border bg-bg"
+            >
+              {properties}
+            </aside>
+          ) : null}
         </div>
+
+        {!isDesktop ? (
+          <Sheet open={propertiesOpen && hasSelection} onOpenChange={setPropertiesOpen}>
+            <SheetContent
+              side={isPhone ? 'bottom' : 'right'}
+              title="Properties"
+              className={isPhone ? 'max-h-[70dvh]' : ''}
+            >
+              <div className="-mx-4">{properties}</div>
+            </SheetContent>
+          </Sheet>
+        ) : null}
 
         {!isDesktop ? (
           <Sheet open={paletteOpen} onOpenChange={setPaletteOpen}>
@@ -536,10 +914,12 @@ function BoardHeader({
   diagram,
   saved,
   persistent,
+  panelToggles,
 }: {
   diagram: DiagramDoc;
   saved: boolean;
   persistent: boolean;
+  panelToggles?: ReactNode;
 }) {
   const [title, setTitle] = useState(() => String(diagram.meta.get('title') ?? 'Untitled board'));
   useEffect(() => {
@@ -579,6 +959,7 @@ function BoardHeader({
         className="min-w-0 max-w-[40ch] flex-1 truncate rounded-md border border-transparent bg-transparent px-2 py-1 text-md font-semibold hover:border-border focus:border-accent focus:outline-none"
       />
       <div className="ml-auto flex items-center gap-2">
+        {panelToggles}
         {persistent ? (
           <StatusPill status={saved ? 'local' : 'saving'} />
         ) : (
@@ -592,6 +973,8 @@ function BoardHeader({
 }
 
 function Toolbar(props: {
+  tool: Tool;
+  onTool: (tool: Tool) => void;
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
@@ -601,12 +984,31 @@ function Toolbar(props: {
   onZoomOut: () => void;
   onFit: () => void;
 }) {
+  const tools: Array<[Tool, string, string, ReactNode]> = [
+    ['select', 'Select and move', 'V', <MousePointer2 key="i" />],
+    ['pen', 'Pen: draw freehand', 'D', <Pencil key="i" />],
+    ['shape', 'Shape: drag to draw', 'R', <Square key="i" />],
+    ['text', 'Text box: click to type', 'T', <Type key="i" />],
+  ];
   return (
     <div
       role="toolbar"
       aria-label="Board tools"
-      className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-border bg-surface p-1 shadow-e2"
+      className="absolute bottom-4 left-1/2 z-10 flex max-w-[calc(100%-24px)] -translate-x-1/2 items-center gap-0.5 overflow-x-auto rounded-lg border border-border bg-surface p-1 shadow-e2"
     >
+      {tools.map(([t, label, key, icon]) => (
+        <IconButton
+          key={t}
+          label={label}
+          shortcut={key}
+          tooltipSide="top"
+          aria-pressed={props.tool === t}
+          onClick={() => props.onTool(t)}
+        >
+          {icon}
+        </IconButton>
+      ))}
+      <span className="mx-1 h-5 w-px shrink-0 bg-border" aria-hidden="true" />
       <IconButton
         label="Undo"
         shortcut="Ctrl+Z"
@@ -683,6 +1085,119 @@ function EmptyHint({
             ) : null;
           })}
         </div>
+      </div>
+    </div>
+  );
+}
+
+const SHAPE_OPTIONS: Array<[ShapeKind, string, ReactNode]> = [
+  ['rectangle', 'Rectangle', <Square key="i" />],
+  ['rounded', 'Rounded rectangle', <RectangleHorizontal key="i" />],
+  ['ellipse', 'Ellipse', <Circle key="i" />],
+  ['diamond', 'Diamond', <Diamond key="i" />],
+  ['cylinder', 'Cylinder', <Cylinder key="i" />],
+  ['hexagon', 'Hexagon', <Hexagon key="i" />],
+];
+
+/** Options for the active drawing tool, floating above the toolbar. */
+function ToolOptions({
+  tool,
+  settings,
+  onChange,
+  onDone,
+}: {
+  tool: 'pen' | 'shape';
+  settings: ToolSettings;
+  onChange: (s: ToolSettings) => void;
+  onDone: () => void;
+}) {
+  return (
+    <div
+      role="toolbar"
+      aria-label={tool === 'pen' ? 'Pen options' : 'Shape options'}
+      className="absolute bottom-[68px] left-1/2 z-10 flex max-w-[calc(100%-24px)] -translate-x-1/2 items-center gap-2 overflow-x-auto rounded-lg border border-border bg-surface px-2 py-1 shadow-e2"
+    >
+      {tool === 'shape' ? (
+        <div className="flex items-center gap-0.5" role="radiogroup" aria-label="Shape">
+          {SHAPE_OPTIONS.map(([shape, label, icon]) => (
+            <IconButton
+              key={shape}
+              label={label}
+              tooltipSide="top"
+              aria-pressed={settings.shape === shape}
+              onClick={() => onChange({ ...settings, shape })}
+            >
+              {icon}
+            </IconButton>
+          ))}
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-1.5" role="radiogroup" aria-label="Ink colour">
+            {(Object.keys(INK_COLOURS) as InkColor[]).map((ink) => (
+              <button
+                key={ink}
+                type="button"
+                role="radio"
+                aria-checked={settings.ink === ink}
+                aria-label={ink === 'ink' ? 'Ink' : ink}
+                title={ink === 'ink' ? 'Ink' : ink}
+                onClick={() => onChange({ ...settings, ink })}
+                className={cn(
+                  'size-6 shrink-0 rounded-full border border-border-strong pointer-coarse:size-9',
+                  settings.ink === ink && 'ring-2 ring-accent ring-offset-2 ring-offset-surface',
+                )}
+                style={{ background: INK_COLOURS[ink] }}
+              />
+            ))}
+          </div>
+          <SegmentedControl
+            ariaLabel="Line width"
+            value={String(settings.strokeWidth)}
+            onValueChange={(w) => onChange({ ...settings, strokeWidth: Number(w) })}
+            options={STROKE_OPTIONS}
+          />
+        </>
+      )}
+      <span className="h-5 w-px shrink-0 bg-border" aria-hidden="true" />
+      <Button size="sm" variant="ghost" onClick={onDone} className="shrink-0">
+        Done <Kbd>Esc</Kbd>
+      </Button>
+    </div>
+  );
+}
+
+/** "G" opens this: pick a container type (or press 1–6). */
+function GroupMenu({ onPick, onClose }: { onPick: (t: GroupType) => void; onClose: () => void }) {
+  const first = useRef<HTMLButtonElement>(null);
+  useEffect(() => first.current?.focus(), []);
+  return (
+    <div
+      role="dialog"
+      aria-label="Group selection into"
+      className="absolute left-1/2 top-4 z-20 w-[min(520px,calc(100%-24px))] -translate-x-1/2 rounded-xl border border-border bg-surface-raised p-3 shadow-e3 animate-pop-in"
+    >
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-sm font-semibold">Group into…</p>
+        <span className="flex items-center gap-2 text-xs text-text-muted">
+          Press 1–6
+          <Button size="sm" variant="ghost" onClick={onClose}>
+            Cancel <Kbd>Esc</Kbd>
+          </Button>
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+        {GROUP_TYPES.map((t, i) => (
+          <Button
+            key={t}
+            ref={i === 0 ? first : undefined}
+            size="sm"
+            onClick={() => onPick(t)}
+            className="justify-start"
+          >
+            <Kbd>{i + 1}</Kbd> {GROUP_LABELS[t]}
+          </Button>
+        ))}
       </div>
     </div>
   );

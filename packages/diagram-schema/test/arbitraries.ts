@@ -54,6 +54,30 @@ const nodeBody = fc.oneof(
     text: fc.string({ maxLength: 60 }),
     fontSize: fc.constantFrom('s', 'm', 'l' as const),
   }),
+  fc.record({
+    kind: fc.constant('shape' as const),
+    shape: fc.constantFrom(
+      'rectangle',
+      'rounded',
+      'ellipse',
+      'diamond',
+      'cylinder',
+      'hexagon' as const,
+    ),
+    text: fc.string({ maxLength: 40 }),
+    fill: fc.constantFrom('none', 'grey', 'blue', 'green', 'yellow', 'pink', 'purple' as const),
+    size,
+  }),
+  fc.record({
+    kind: fc.constant('drawing' as const),
+    points: fc.array(fc.tuple(fc.integer({ min: 0, max: 400 }), fc.integer({ min: 0, max: 400 })), {
+      minLength: 2,
+      maxLength: 30,
+    }),
+    color: fc.constantFrom('ink', 'blue', 'red', 'green', 'orange', 'purple' as const),
+    strokeWidth: fc.integer({ min: 1, max: 16 }),
+    size,
+  }),
 );
 
 /** Arbitrary *valid* DiagramV1: unique ids, parents are earlier groups (no cycles). */

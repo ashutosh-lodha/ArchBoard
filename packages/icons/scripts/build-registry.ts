@@ -8,7 +8,7 @@
  * `pnpm icons:import` has extracted them into vendor/<provider>/ (see sources.json).
  * Usage: tsx scripts/build-registry.ts
  */
-import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { optimize } from 'svgo';
@@ -50,7 +50,9 @@ function optimiseSvg(svg: string, idPrefix: string): string {
 }
 
 async function main(): Promise<void> {
-  await rm(outDir, { recursive: true, force: true });
+  // Never delete the output folder: a running dev server may read it at any moment. SVGs are
+  // overwritten in place and registry.json is swapped in atomically at the end.
+  await mkdir(outDir, { recursive: true });
   await mkdir(join(outDir, 'svg', 'generic'), { recursive: true });
 
   const icons: IconEntry[] = [];
@@ -111,7 +113,9 @@ async function main(): Promise<void> {
     providers,
     icons,
   };
-  await writeFile(join(outDir, 'registry.json'), JSON.stringify(registry));
+  const tmp = join(outDir, `registry.${process.pid}.tmp`);
+  await writeFile(tmp, JSON.stringify(registry));
+  await rename(tmp, join(outDir, 'registry.json'));
   console.log(
     `Registry: ${icons.length} icons → ${relative(process.cwd(), join(outDir, 'registry.json'))}`,
   );

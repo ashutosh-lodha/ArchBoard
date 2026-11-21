@@ -15,7 +15,9 @@ const registryPath = join(root, 'generated', 'registry.json');
 const registry: IconRegistry | null = existsSync(registryPath)
   ? (JSON.parse(readFileSync(registryPath, 'utf8')) as IconRegistry)
   : null;
-const hasVendor = Boolean(registry?.providers.aws && registry.providers.azure);
+const hasVendor = Boolean(
+  registry?.providers.aws && registry.providers.azure && registry.providers.gcp,
+);
 
 describe.skipIf(!registry)('generated registry', () => {
   it('has unique ids that match the diagram schema icon id format', () => {
@@ -34,7 +36,7 @@ describe.skipIf(!registry)('generated registry', () => {
   });
 });
 
-describe.skipIf(!hasVendor)('search over the real AWS + Azure packs', () => {
+describe.skipIf(!hasVendor)('search over the real AWS, Azure and Google Cloud packs', () => {
   const search = createIconSearch(registry?.icons ?? []);
 
   it.each(['lb', 'elb', 'load balancer'])(
@@ -53,6 +55,11 @@ describe.skipIf(!hasVendor)('search over the real AWS + Azure packs', () => {
     ['load balancer', 'azure', 'azure/load-balancers'],
     ['k8s', 'azure', 'azure/kubernetes-services'],
     ['vm', 'azure', 'azure/virtual-machine'],
+    ['pubsub', 'gcp', 'gcp/pubsub'],
+    ['lb', 'gcp', 'gcp/cloud-load-balancing'],
+    ['redis', 'gcp', 'gcp/memorystore'],
+    ['k8s', 'gcp', 'gcp/gke'],
+    ['data warehouse', 'gcp', 'gcp/bigquery'],
   ] as const)('"%s" in %s → %s', (q, provider, id) => {
     const top3 = search
       .search(q, { provider })
@@ -65,5 +72,6 @@ describe.skipIf(!hasVendor)('search over the real AWS + Azure packs', () => {
     // AWS ≈ 300 service icons per release, Azure ≈ 640 (V25). Guard against a silent layout change.
     expect(registry!.providers.aws!.count).toBeGreaterThan(250);
     expect(registry!.providers.azure!.count).toBeGreaterThan(550);
+    expect(registry!.providers.gcp!.count).toBeGreaterThan(200);
   });
 });

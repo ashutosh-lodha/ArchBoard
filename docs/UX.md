@@ -206,7 +206,8 @@ Shown in the `?` panel, searchable. ⌘ = Ctrl on Windows/Linux.
 | Rename selected | Enter / F2 |
 | Nudge / Big nudge | Arrows / ⇧Arrows |
 | Group / Ungroup | G (or ⌘G) / ⇧G |
-| Add note / text | N / T |
+| Add sticky note | N |
+| Tools: select / pen / shape / text box | V / D / R / T (Esc returns to select) |
 | Toggle snap & guides | ⇧S |
 | Zoom in / out / 100% | ⌘= / ⌘- / ⌘0 |
 | Zoom to fit / to selection | ⇧1 / ⇧2 |

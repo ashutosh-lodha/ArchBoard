@@ -15,11 +15,46 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { unzipSync } from 'fflate';
 
-interface Source {
-  page: string;
+interface Pack {
   url: string;
   sha256: string;
+  /** Sub-folder under vendor/<provider>/. Earlier folders win when two packs share an icon. */
+  dir: string;
+}
+
+interface Source {
+  page: string;
   packVersion: string;
+  /** Single-pack providers. */
+  url?: string;
+  sha256?: string;
+  /** Multi-pack providers (Google Cloud ships a 2025 core set plus a legacy set). */
+  packs?: Pack[];
+}
+
+async function download(provider: string, url: string): Promise<Uint8Array> {
+  console.log(`${provider}: downloading ${url}`);
+  const res = await fetch(url, { redirect: 'follow' });
+  if (!res.ok) throw new Error(`${provider}: HTTP ${res.status} for ${url}`);
+  const len = Number(res.headers.get('content-length') ?? 0);
+  if (len > MAX_BYTES)
+    throw new Error(`${provider}: pack is ${len} bytes, over the ${MAX_BYTES} limit.`);
+  return new Uint8Array(await res.arrayBuffer());
+}
+
+function verify(provider: string, expected: string | undefined, data: Uint8Array): string {
+  const digest = sha256(data);
+  if (expected && expected !== digest) {
+    throw new Error(
+      `${provider}: SHA-256 mismatch.
+  expected ${expected}
+  got      ${digest}
+The pack changed upstream; review it and update sources.json.`,
+    );
+  }
+  if (!expected)
+    console.warn(`${provider}: no pinned SHA-256 yet. Pin this value in sources.json: ${digest}`);
+  return digest;
 }
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -72,39 +107,34 @@ async function main(): Promise<void> {
   for (const provider of providers) {
     const source = sources[provider];
     if (!source) throw new Error(`Unknown provider "${provider}" (expected aws, gcp or azure).`);
-    let data: Uint8Array;
-    if (localZip) {
-      data = new Uint8Array(await readFile(localZip));
-    } else {
-      if (!source.url) {
-        console.warn(
-          `${provider}: no download URL in sources.json yet — skipping (see ${source.page}).`,
-        );
-        continue;
-      }
-      console.log(`${provider}: downloading ${source.url}`);
-      const res = await fetch(source.url, { redirect: 'follow' });
-      if (!res.ok) throw new Error(`${provider}: HTTP ${res.status} for ${source.url}`);
-      const len = Number(res.headers.get('content-length') ?? 0);
-      if (len > MAX_BYTES)
-        throw new Error(`${provider}: pack is ${len} bytes, over the ${MAX_BYTES} limit.`);
-      data = new Uint8Array(await res.arrayBuffer());
-    }
-    const digest = sha256(data);
-    if (source.sha256 && source.sha256 !== digest) {
-      throw new Error(
-        `${provider}: SHA-256 mismatch.\n  expected ${source.sha256}\n  got      ${digest}\nThe pack changed upstream; review it and update sources.json.`,
-      );
-    }
-    if (!source.sha256)
-      console.warn(`${provider}: no pinned SHA-256 yet. Pin this value in sources.json: ${digest}`);
     const target = join(vendorDir, provider);
+    const packs: Pack[] =
+      source.packs ??
+      (source.url ? [{ url: source.url, sha256: source.sha256 ?? '', dir: '' }] : []);
+    if (packs.length === 0 && !localZip) {
+      console.warn(
+        `${provider}: no download URL in sources.json yet — skipping (see ${source.page}).`,
+      );
+      continue;
+    }
     await rm(target, { recursive: true, force: true });
-    const count = await extractSvgs(data, target);
+    let count = 0;
+    const digests: string[] = [];
+    if (localZip) {
+      const data = new Uint8Array(await readFile(localZip));
+      digests.push(verify(provider, undefined, data));
+      count += await extractSvgs(data, target);
+    } else {
+      for (const pack of packs) {
+        const data = await download(provider, pack.url);
+        digests.push(verify(provider, pack.sha256, data));
+        count += await extractSvgs(data, pack.dir ? join(target, pack.dir) : target);
+      }
+    }
     manifest[provider] = {
       packVersion: source.packVersion,
       source: source.page,
-      sha256: digest,
+      sha256: digests.join(','),
       importedAt: new Date().toISOString(),
     };
     console.log(`${provider}: extracted ${count} SVG files`);

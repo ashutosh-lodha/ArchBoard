@@ -17,6 +17,7 @@ export const LIMITS = {
   noteText: 4000,
   freeText: 2000,
   notes: 4000,
+  drawingPoints: 4000,
 } as const;
 
 export const Id = z
@@ -108,11 +109,50 @@ export const TextNode = z.object({
   fontSize: FontSize.default('m'),
 });
 
+export const ShapeKind = z.enum([
+  'rectangle',
+  'rounded',
+  'ellipse',
+  'diamond',
+  'cylinder',
+  'hexagon',
+]);
+export const ShapeFill = z.enum(['none', 'grey', 'blue', 'green', 'yellow', 'pink', 'purple']);
+export const InkColor = z.enum(['ink', 'blue', 'red', 'green', 'orange', 'purple']);
+
+/** Plain diagram shapes with optional text inside (flowcharts, callouts, decision diamonds). */
+export const ShapeNode = z.object({
+  ...nodeBase,
+  kind: z.literal('shape'),
+  shape: ShapeKind,
+  text: z.string().max(LIMITS.freeText).default(''),
+  fill: ShapeFill.default('none'),
+  size: Size,
+});
+
+/**
+ * A freehand pen stroke. Points are relative to `position` (the stroke's top-left), so moving
+ * the stroke only changes `position`. Coordinates are rounded to 0.5 px to keep docs small.
+ */
+export const DrawingNode = z.object({
+  ...nodeBase,
+  kind: z.literal('drawing'),
+  points: z
+    .array(z.tuple([z.number(), z.number()]))
+    .min(2, 'A drawing needs at least two points.')
+    .max(LIMITS.drawingPoints, `A drawing can have at most ${LIMITS.drawingPoints} points.`),
+  color: InkColor.default('ink'),
+  strokeWidth: z.number().min(1).max(16).default(2.5),
+  size: Size,
+});
+
 export const DiagramNode = z.discriminatedUnion('kind', [
   ComponentNode,
   GroupNode,
   NoteNode,
   TextNode,
+  ShapeNode,
+  DrawingNode,
 ]);
 
 export const DiagramEdge = z.object({
@@ -160,6 +200,11 @@ export type ComponentNode = z.infer<typeof ComponentNode>;
 export type GroupNode = z.infer<typeof GroupNode>;
 export type NoteNode = z.infer<typeof NoteNode>;
 export type TextNode = z.infer<typeof TextNode>;
+export type ShapeNode = z.infer<typeof ShapeNode>;
+export type DrawingNode = z.infer<typeof DrawingNode>;
+export type ShapeKind = z.infer<typeof ShapeKind>;
+export type ShapeFill = z.infer<typeof ShapeFill>;
+export type InkColor = z.infer<typeof InkColor>;
 export type DiagramNode = z.infer<typeof DiagramNode>;
 export type DiagramEdge = z.infer<typeof DiagramEdge>;
 export type DiagramMeta = z.infer<typeof DiagramMeta>;

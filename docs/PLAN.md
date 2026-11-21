@@ -57,20 +57,20 @@ See [DESIGN.md](DESIGN.md) and [UX.md](UX.md).
 ## Phase 2: Single-user canvas, polished (largest phase)
 **Goal:** a local board (IndexedDB, no server) that feels finished. Everything in UX §4–§6 that doesn't need a second user.
 
-- [ ] Board shell: header (title inline rename, save pill), collapsible left palette and right panel, floating toolbar, minimap, error boundaries per panel
+- [x] Board shell: header (title inline rename, save pill), collapsible left palette and right panel, floating toolbar, minimap, error boundaries per panel
 - [ ] React Flow integration: Y.Doc → Zustand projection with per-frame coalescing; memoised custom nodes (component, group, note, text) and edges (smooth-step, label pill, sync/async, protocol tag, arrows)
-- [ ] Palette: fuzzy search + aliases, provider filters, favourites, recents, drag-to-place (ghost + snap preview), click-to-add with `findFreeSpot`, lazy provider packs
+- [ ] Palette: fuzzy search + aliases, provider filters, favourites, recents, drag-to-place (ghost + snap preview), click-to-add with `findFreeSpot`, lazy provider packs — search, aliases, provider tabs (incl. GCP), recents, click and drag done; favourites pending
 - [ ] Quick-add popover (`/`, double-click, drop-to-connect)
 - [ ] Connecting: hover handles, magnetic targets, drop-on-empty → quick-add + auto-connect, reconnect endpoints, duplicate-edge prevention
-- [ ] Inline rename, properties panel per selection type, tradeoff hint cards for all 21 generic types
-- [ ] Selection: click, Shift-click, box select, select all; nudge; delete with undo toast
-- [ ] Groups: create via `G` menu, drag in and out with re-parenting, resize, nest, ungroup
+- [x] Inline rename, properties panel per selection type, tradeoff hint cards for all 21 generic types
+- [ ] Selection: click, Shift-click, box select, select all; nudge; delete with undo toast — click, Shift-click, box select and delete with undo done; select-all and nudge pending
+- [x] Groups: create via `G` menu, drag in and out with re-parenting, resize, nest, ungroup
 - [ ] Snap to grid + alignment guides (toggle, Alt to bypass); align/distribute; zoom to fit and to selection
-- [ ] Undo/redo via Y.UndoManager (drag merging, multi-op transactions)
+- [x] Undo/redo via Y.UndoManager (drag merging, multi-op transactions)
 - [ ] Copy/paste/duplicate (system clipboard, across boards and tabs), context menu
 - [ ] Command palette (cmdk) with every action; `?` shortcuts panel; keyboard map from UX §6
-- [ ] Notes and free text
-- [ ] Autosave to IndexedDB + save pill; `/new` chooser (blank + templates placeholder)
+- [x] Notes and free text — plus Paint-style shapes (6 kinds), a freehand pen (6 inks, 3 widths) and text boxes, added on request
+- [ ] Autosave to IndexedDB + save pill; `/new` chooser (blank + templates placeholder) — autosave done; /new opens a blank board, chooser comes with templates
 - [ ] Export PNG/SVG (transparent, padding, scale, selection only) with live preview; JSON export; JSON import with validation errors shown per item
 - [ ] Outline view (accessible tree) with keyboard focus management
 - [ ] Responsive: tablet drawers + touch gestures + long-press menu + select toggle; phone layout with bottom sheets and tap-to-connect mode
@@ -85,7 +85,7 @@ See [DESIGN.md](DESIGN.md) and [UX.md](UX.md).
 - [ ] Export: PNG/SVG visual snapshots match baselines (light, dark, transparent)
 - [ ] Import: 10 malformed fixtures show human-readable errors; valid ones round-trip byte-equal
 - [ ] axe 0 serious/critical on the editor in both themes; keyboard-only user can add, connect, rename and delete via ⌘K + outline
-- [ ] Reload mid-edit restores the exact state from IndexedDB
+- [x] Reload mid-edit restores the exact state from IndexedDB
 
 ---
 

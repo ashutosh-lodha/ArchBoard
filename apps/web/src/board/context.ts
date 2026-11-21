@@ -5,9 +5,11 @@ import type { LoadedRegistry } from './registry.ts';
 export interface BoardContextValue {
   diagram: DiagramDoc;
   registry: LoadedRegistry;
-  /** Id of the node whose label is being edited inline, if any. */
+  /** Id of the node whose text is being edited inline, if any. */
   editingId: string | null;
   setEditingId: (id: string | null) => void;
+  /** Group highlighted while something is dragged over it (drop to put it inside). */
+  dropTargetId: string | null;
 }
 
 export const BoardContext = createContext<BoardContextValue | null>(null);

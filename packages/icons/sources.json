@@ -7,9 +7,19 @@
   },
   "gcp": {
     "page": "https://cloud.google.com/icons",
-    "url": "",
-    "sha256": "",
-    "packVersion": ""
+    "packVersion": "2025 core product icons + legacy console icons",
+    "packs": [
+      {
+        "url": "https://services.google.com/fh/files/misc/core-products-icons.zip",
+        "sha256": "6531a10f58bc599c24d9a455d81dd757c1a03c3c43da9cddf639b859c1c1eece",
+        "dir": "1-core"
+      },
+      {
+        "url": "https://services.google.com/fh/files/misc/google-cloud-legacy-icons.zip",
+        "sha256": "a6d9d7921758042538b462f03cf64614c2cebd96743b3ed63580a769fc7de3e9",
+        "dir": "2-legacy"
+      }
+    ]
   },
   "azure": {
     "page": "https://learn.microsoft.com/en-us/azure/architecture/icons/",

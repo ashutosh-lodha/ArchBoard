@@ -45,7 +45,9 @@ export const Palette = forwardRef<HTMLInputElement, PaletteProps>(function Palet
 ) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
-  const [recents, setRecents] = useState(readRecents);
+  // Snapshot recents when the panel opens. Re-sorting while the user is clicking would move tiles
+  // under the cursor and cause mis-clicks; the new order shows next time the panel opens.
+  const [recents] = useState(readRecents);
 
   const hasProvider = (p: Provider) => registry.icons.some((i) => i.provider === p);
   const filters: Array<{ value: Filter; label: string }> = [
@@ -90,7 +92,6 @@ export const Palette = forwardRef<HTMLInputElement, PaletteProps>(function Palet
 
   const add = (entry: IconEntry) => {
     pushRecent(entry.id);
-    setRecents(readRecents());
     onAdd(entry);
   };
 

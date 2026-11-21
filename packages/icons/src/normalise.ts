@@ -142,20 +142,61 @@ export function normaliseAzure(path: string): NormalisedName | null {
   return { slug, label: labelFromToken(m[1]), category: titleCase(slugify(category)) };
 }
 
+/** Google product words whose casing a generic title-caser gets wrong. */
+const GCP_WORDS = new Map([
+  ['bigquery', 'BigQuery'],
+  ['pubsub', 'Pub/Sub'],
+  ['bigtable', 'Bigtable'],
+  ['alloydb', 'AlloyDB'],
+  ['vertexai', 'Vertex AI'],
+  ['dataproc', 'Dataproc'],
+  ['dataflow', 'Dataflow'],
+  ['datastream', 'Datastream'],
+  ['firestore', 'Firestore'],
+  ['memorystore', 'Memorystore'],
+  ['vmware', 'VMware'],
+  ['looker', 'Looker'],
+  ['apigee', 'Apigee'],
+  ['anthos', 'Anthos'],
+  ['gke', 'GKE'],
+  ['kms', 'KMS'],
+  ['iap', 'IAP'],
+]);
+
+function gcpLabel(raw: string): string {
+  return raw
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((w, i) => {
+      const lower = w.toLowerCase();
+      if (GCP_WORDS.has(lower)) return GCP_WORDS.get(lower) as string;
+      if (w !== lower) return w; // keep the pack's own casing ("Cloud Run", "AlloyDB")
+      if (i > 0 && SMALL_WORDS.has(lower)) return lower;
+      return ACRONYMS.get(lower) ?? lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join(' ');
+}
+
 /**
- * Google Cloud: product icons such as ".../<Product>/SVG/<Product>-512-color.svg" or
- * ".../<category>/<product>.svg". Size/colour suffixes are stripped.
+ * Google Cloud ships two layouts:
+ * - 2025 core icons: ".../Unique Icons/<Product Name>/SVG/<File>-512-color.svg" — the product
+ *   folder has the proper name, so use it.
+ * - legacy icons:    ".../<snake_name>/<snake_name>.svg".
  */
 export function normaliseGcp(path: string): NormalisedName | null {
   const p = parts(path);
+  const svgDir = p.findIndex((d) => /^svg$/i.test(d));
+  if (svgDir > 0) {
+    const product = p[svgDir - 1] as string;
+    const slug = slugify(product.replace(/_/g, ' '));
+    return slug ? { slug, label: gcpLabel(product), category: 'Products' } : null;
+  }
   const file = base(path)
     .replace(/[-_](512|256|128|64|48|32|24)([-_]color|[-_]colour|[-_]rgb)?$/i, '')
     .replace(/[-_](color|colour|rgb)$/i, '');
   if (!file || /^(icon|logo)$/i.test(file)) return null;
   const slug = slugify(file);
-  const dirs = p.slice(0, -1).filter((d) => !/^(svg|png|icons?)$/i.test(d));
-  const category = dirs.length >= 2 ? (dirs.at(-2) ?? 'Other') : 'Products';
-  return { slug, label: titleCase(slug), category: titleCase(slugify(category)) };
+  return slug ? { slug, label: gcpLabel(file), category: 'Products' } : null;
 }
 
 export const NORMALISERS: Record<
@@ -172,6 +213,7 @@ export const NORMALISERS: Record<
  * generic block and the provider icon. Patterns match the normalised slug.
  */
 export const PROVIDER_ALIASES: Array<[RegExp, string[]]> = [
+  [/bigquery|redshift|synapse/, ['data warehouse', 'analytics', 'olap']],
   [/load-balanc/, ['lb', 'elb', 'alb', 'nlb', 'load balancer']],
   [
     /simple-storage-service|^cloud-storage$|storage-accounts|blob/,
@@ -182,7 +224,7 @@ export const PROVIDER_ALIASES: Array<[RegExp, string[]]> = [
   [/api-gateway|api-management|apigee/, ['api gateway', 'gateway', 'apigw']],
   [/simple-queue-service|cloud-tasks|service-bus|storage-queue/, ['queue', 'sqs', 'mq']],
   [
-    /simple-notification-service|pub-sub|eventbridge|event-grid/,
+    /simple-notification-service|pub-?sub|eventbridge|event-grid/,
     ['pub/sub', 'pubsub', 'topic', 'sns', 'event bus'],
   ],
   [/kinesis|managed-streaming|event-hubs|dataflow/, ['stream', 'kafka', 'streaming']],
