@@ -4,8 +4,9 @@
 
 Draw architectures with real AWS, Google Cloud and Azure icons. Pass the pen between interviewer and candidate, run a phased interview timer, size the system with a built-in capacity calculator, and replay how the design evolved.
 
-> 🚧 **Status: Phase 1 of 9 (foundations) complete.** The editor ships in Phase 2. See [docs/PLAN.md](docs/PLAN.md).
-> Live at `https://archboard.ashutoshdev.online` from Phase 7.
+> **Live:** https://archboard.ashutoshdev.online · **Status:** the single-user editor works today (components, connections, groups, pen and shapes, capacity calculator); live collaboration, interview mode and replay are on the roadmap. See [docs/PLAN.md](docs/PLAN.md).
+>
+> **Board rules:** one board per person at a time, deleted automatically 7 days after it is created. Boards are stored in your browser.
 
 ## Why it's interesting
 
@@ -41,6 +42,15 @@ Full design: [docs/DESIGN.md](docs/DESIGN.md) · UX spec: [docs/UX.md](docs/UX.m
 | `packages/ui`             | Design tokens and components (Tailwind v4 + Radix)                          |
 | `packages/shared`         | Errors, env loading, logging, storage                                       |
 | `e2e`                     | Playwright end-to-end and accessibility tests                               |
+
+## Deployment
+
+Production is a single GCE VM running Caddy (automatic HTTPS) that serves the built SPA:
+
+- `infra/vm/startup.sh` bootstraps the VM (Caddy, a locked-down `deploy` user, swap).
+- `infra/caddy/Caddyfile` sets security headers (strict CSP, HSTS) and caching.
+- `.github/workflows/deploy.yml` deploys after CI passes on `main`: build, upload, atomic symlink switch, smoke test. Run it manually with **rollback** to go back a release.
+- Repository secrets: `VM_HOST` (static IP) and `VM_SSH_KEY` (deploy user key).
 
 ## Local development
 

@@ -1,0 +1,167 @@
+{
+  "format": "archboard.diagram",
+  "version": 1,
+  "meta": { "title": "URL shortener" },
+  "nodes": [
+    {
+      "id": "client",
+      "kind": "component",
+      "iconId": "generic/client",
+      "label": "Web & mobile",
+      "position": { "x": 0, "y": 224 }
+    },
+    {
+      "id": "dns",
+      "kind": "component",
+      "iconId": "generic/dns",
+      "label": "DNS",
+      "position": { "x": 0, "y": 64 }
+    },
+    {
+      "id": "lb",
+      "kind": "component",
+      "iconId": "generic/load-balancer",
+      "label": "Load balancer",
+      "position": { "x": 256, "y": 224 }
+    },
+    {
+      "id": "vpc",
+      "kind": "group",
+      "groupType": "vpc",
+      "label": "ap-south-1 VPC",
+      "position": { "x": 496, "y": 88 },
+      "size": { "width": 600, "height": 336 }
+    },
+    {
+      "id": "api",
+      "kind": "component",
+      "iconId": "generic/service",
+      "label": "URL service",
+      "parentId": "vpc",
+      "position": { "x": 32, "y": 120 },
+      "size": { "width": 216, "height": 96 },
+      "data": { "replicas": 3, "description": "Create short codes, 301 redirects" }
+    },
+    {
+      "id": "cache",
+      "kind": "component",
+      "iconId": "generic/cache",
+      "label": "Redis cache",
+      "parentId": "vpc",
+      "position": { "x": 360, "y": 48 },
+      "data": { "description": "Hot codes · LRU · TTL 24h" }
+    },
+    {
+      "id": "db",
+      "kind": "component",
+      "iconId": "generic/sql-db",
+      "label": "Postgres",
+      "parentId": "vpc",
+      "position": { "x": 360, "y": 224 },
+      "data": { "description": "code → long URL" }
+    },
+    {
+      "id": "queue",
+      "kind": "component",
+      "iconId": "generic/queue",
+      "label": "Click events",
+      "position": { "x": 528, "y": 496 }
+    },
+    {
+      "id": "worker",
+      "kind": "component",
+      "iconId": "generic/worker",
+      "label": "Analytics worker",
+      "position": { "x": 784, "y": 496 }
+    },
+    {
+      "id": "bq",
+      "kind": "component",
+      "iconId": "gcp/bigquery",
+      "label": "BigQuery",
+      "position": { "x": 1040, "y": 496 }
+    },
+    {
+      "id": "estimate",
+      "kind": "note",
+      "color": "blue",
+      "position": { "x": 1152, "y": 112 },
+      "size": { "width": 292, "height": 150 },
+      "text": "Capacity (10M DAU)\nReads: 11.6K QPS avg · 34.7K peak\nWrites: 116 QPS avg · 347 peak\nStorage: 1.83 TB/yr · 9.13 TB over 5 yr\nBandwidth: 57.9 KB/s in · 5.79 MB/s out"
+    },
+    {
+      "id": "hint",
+      "kind": "text",
+      "text": "Read path: cache first",
+      "fontSize": "s",
+      "position": { "x": 1152, "y": 288 }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "client",
+      "target": "lb",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "protocol": "http"
+    },
+    {
+      "id": "e0",
+      "source": "client",
+      "target": "dns",
+      "sourceHandle": "top",
+      "targetHandle": "bottom",
+      "label": "resolve"
+    },
+    {
+      "id": "e2",
+      "source": "lb",
+      "target": "api",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "protocol": "http"
+    },
+    {
+      "id": "e3",
+      "source": "api",
+      "target": "cache",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "label": "read-through"
+    },
+    {
+      "id": "e4",
+      "source": "api",
+      "target": "db",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "label": "writes"
+    },
+    {
+      "id": "e5",
+      "source": "api",
+      "target": "queue",
+      "sourceHandle": "bottom",
+      "targetHandle": "top",
+      "style": "async",
+      "protocol": "pubsub"
+    },
+    {
+      "id": "e6",
+      "source": "queue",
+      "target": "worker",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "style": "async"
+    },
+    {
+      "id": "e7",
+      "source": "worker",
+      "target": "bq",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "label": "batch load"
+    }
+  ]
+}

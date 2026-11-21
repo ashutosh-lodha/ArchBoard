@@ -216,7 +216,7 @@ See [DESIGN.md](DESIGN.md) and [UX.md](UX.md).
 ---
 
 ## Phase 9: AI architecture agent (after MVP sign-off)
-- [ ] `LlmProvider` interface + Claude implementation (tool use: `emit_diagram`, `search_icons`), keys from Secret Manager
+- [ ] `LlmProvider` interface + first provider implementation (tool use: `emit_diagram`, `search_icons`), keys from Secret Manager
 - [ ] BullMQ queue + worker container (memory-limited), job API + SSE progress
 - [ ] Validate → feed back errors → retry (max 3); ELK.js layout honouring groups
 - [ ] UI: "Generate with AI" on `/new` and a board panel; progress steps; preview vs apply; single-transaction apply (one undo step, replay marker)

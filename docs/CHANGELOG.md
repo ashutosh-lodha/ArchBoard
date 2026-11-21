@@ -51,3 +51,9 @@ Local boards with IndexedDB autosave; a component panel (search, aliases, provid
 - Components: resizable cards with text on the card (schema: optional `size` and `data.description`, additive).
 - Sturdier focus for new editors; drawing no longer depends on pointer capture.
 - Tests: pen fidelity, box/circle typing, component text and resize across reload; 68 e2e checks pass.
+
+### Slice 4: capacity calculator, board policy, landing page, deployment
+- Capacity calculator (E): live QPS/storage/bandwidth with formulas; inputs saved with the board; attach to a component or add as a note.
+- Board policy: one board per person, auto-deleted after 7 days; countdown badge, delete-board action, clear messages for expired boards.
+- Landing page with real product screenshots (light/dark), roadmap clearly separated, OG/Twitter tags, robots.txt, sitemap.
+- Production: Caddyfile (strict CSP with no inline scripts, HSTS, caching), VM startup script, deploy and rollback scripts, deploy workflow.

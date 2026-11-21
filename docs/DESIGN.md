@@ -507,6 +507,9 @@ Rooms are capped at 20 MB of encoded state (well beyond 2,000 nodes). An update 
 5. Signing keys: Ed25519 key pair from Secret Manager, with a `kid` header to support rotation.
 
 ### 7.4 Try without signing in
+
+**Board policy (decided 2026-11-21):** one board per person at a time, deleted automatically 7 days after creation. Until accounts land, this is enforced in the browser (`apps/web/src/board/local-boards.ts`); with accounts the API enforces it (unique active board per user, a daily purge job).
+
 `/new` → a **local board**: a Y.Doc persisted in IndexedDB only, with no server and no WebSocket. Everything single-user works offline. When the user clicks Share or Save, the app opens Clerk sign-in. After sign-in, it offers **"Keep this board"**, which uploads it via `POST /api/boards {fromLocal: base64(Y.encodeStateAsUpdate)}`. The server validates it by decoding to DiagramV1 and rejects anything invalid or oversized.
 
 ---
@@ -780,7 +783,7 @@ Load tests never target the live prod VM: real users and the pen lease shouldn't
 
 ## 13. Phase 2 (Phase 9 in PLAN): AI architecture agent — designed now
 - `POST /api/ai/jobs {prompt, provider:'aws'|'gcp'|'azure'|'generic', detail:'overview'|'detailed', boardId?}` → creates an `AiJob` and enqueues it in a Redis-backed queue (BullMQ). The worker runs inside the `api` image as a separate process (`node dist/worker.js`), with its own container and memory limit.
-- `LlmProvider` interface: `generateDiagram(input, tools) → AsyncIterable<ProgressEvent | Result>`. The default implementation uses Claude with **tool use**: a single `emit_diagram` tool whose JSON schema is generated from `DiagramV1` via `zod-to-json-schema`, plus a `search_icons(query, provider)` tool backed by the registry, so the model only uses real icon ids.
+- `LlmProvider` interface: `generateDiagram(input, tools) → AsyncIterable<ProgressEvent | Result>`. The first implementation targets a hosted LLM API with **tool use** (the provider is a config choice): a single `emit_diagram` tool whose JSON schema is generated from `DiagramV1` via `zod-to-json-schema`, plus a `search_icons(query, provider)` tool backed by the registry, so the model only uses real icon ids.
 - Validate with Zod and the registry. On failure, send the error list back as a tool result and retry (max 3). Then lay out with **ELK.js** (`layered`, respecting groups as compound nodes) and stream progress via SSE (`Understanding → Choosing components → Laying out → Ready`).
 - **Applying the result:** the client (as pen holder) applies it as one Y transaction with origin `AI`. Viewers see it appear live, replay records an `AI_APPLIED` event, and it's one undo step. If the requester doesn't hold the pen, the result is shown as a preview with **Request pen to apply** or **Open as new board**.
 - Guardrails: keys only on the server; a per-user limit of 10 jobs/day and a global daily token budget (Redis counter) with a friendly "AI is resting until tomorrow" state; prompt and response logs with emails/URLs redacted, kept 30 days; an eval set of 20 prompts in CI (nightly) checking schema validity, required components (e.g. "rate limiter" prompt ⇒ a rate-limiter node exists), and layout overlap = 0.

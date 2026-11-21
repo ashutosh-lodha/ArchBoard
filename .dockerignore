@@ -12,4 +12,3 @@ packages/icons/vendor
 .env
 .env.*
 !.env.example
-.claude

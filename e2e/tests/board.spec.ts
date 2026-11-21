@@ -33,7 +33,7 @@ test('J1: build, connect, rename, and it survives a reload', async ({ page, isMo
   test.skip(isMobile, 'handle dragging is covered by the desktop and laptop projects');
 
   await page.goto('/');
-  await page.getByRole('link', { name: 'Start a board' }).click();
+  await page.getByRole('link', { name: 'Start a board' }).first().click();
   await expect(page).toHaveURL(/\/b\/local-[a-z0-9]{12}$/);
 
   // Empty canvas never leaves the user without a hint.

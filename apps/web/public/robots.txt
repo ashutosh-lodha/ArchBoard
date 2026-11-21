@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /b/
+Sitemap: https://archboard.ashutoshdev.online/sitemap.xml

@@ -1,0 +1,81 @@
+name: Deploy
+
+# Deploys the web app to the production VM after CI passes on main, or on demand.
+# Needs repository secrets: VM_HOST (the VM's static IP) and VM_SSH_KEY (private key for the
+# VM's "deploy" user). Rollback: run this workflow manually with "rollback" set.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      rollback:
+        description: 'Roll back instead of deploying (optionally to a specific release id)'
+        type: boolean
+        default: false
+      release:
+        description: 'Release id to roll back to (blank = previous)'
+        required: false
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://archboard.ashutoshdev.online
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up SSH
+        env:
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VM_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Roll back
+        if: github.event_name == 'workflow_dispatch' && inputs.rollback
+        run: bash infra/scripts/rollback-web.sh "${{ secrets.VM_HOST }}" "${{ inputs.release }}"
+
+      - uses: pnpm/action-setup@v4
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.rollback) }}
+      - uses: actions/setup-node@v4
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.rollback) }}
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Build
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.rollback) }}
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm icons:import
+          pnpm --filter @archboard/web build
+
+      - name: Deploy (atomic switch)
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.rollback) }}
+        run: bash infra/scripts/deploy-web.sh "${{ secrets.VM_HOST }}" "$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}" apps/web/dist
+
+      - name: Smoke test
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS --max-time 10 https://archboard.ashutoshdev.online/ | grep -q '<title>ArchBoard'; then
+              echo "site is up"; exit 0
+            fi
+            sleep 10
+          done
+          echo "smoke test failed"; exit 1

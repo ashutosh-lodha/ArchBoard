@@ -9,6 +9,8 @@ import {
   distribute,
   GROUP_LABELS,
   groupNodes,
+  loadDiagramIntoDoc,
+  parseDiagram,
   reparent,
   ungroup,
   type AlignMode,
@@ -19,8 +21,11 @@ import {
 } from '@archboard/diagram-schema';
 import type { IconEntry } from '@archboard/icons';
 import {
+  Badge,
   Button,
   cn,
+  ConfirmDialog,
+  Tooltip,
   IconButton,
   Kbd,
   SegmentedControl,
@@ -49,6 +54,9 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import {
+  Calculator,
+  Clock,
+  Trash2,
   Circle,
   Cylinder,
   Diamond,
@@ -77,7 +85,14 @@ import {
   type DragEvent,
   type ReactNode,
 } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
+import {
+  BOARD_LIFETIME_DAYS,
+  daysLeft,
+  deleteCurrentBoard,
+  type BoardRecord,
+} from './local-boards.ts';
+import { CapacityPanel } from './capacity-panel.tsx';
 import { BoardContext } from './context.ts';
 import { INK_COLOURS, nodeTypes } from './nodes.tsx';
 import { GROUP_TYPES, PropertiesPanel, STROKE_OPTIONS } from './properties-panel.tsx';
@@ -129,15 +144,15 @@ function useProjection(diagram: DiagramDoc): Projection {
   return projection;
 }
 
-export function BoardEditor({ board }: { board: BoardDoc }) {
+export function BoardEditor({ board, record }: { board: BoardDoc; record: BoardRecord }) {
   return (
     <ReactFlowProvider>
-      <Editor board={board} />
+      <Editor board={board} record={record} />
     </ReactFlowProvider>
   );
 }
 
-function Editor({ board }: { board: BoardDoc }) {
+function Editor({ board, record }: { board: BoardDoc; record: BoardRecord }) {
   const { diagram, undo } = board;
   const { resolved } = useTheme();
   const rf = useReactFlow();
@@ -162,6 +177,16 @@ function Editor({ board }: { board: BoardDoc }) {
   }, []);
 
   const projection = useProjection(diagram);
+
+  // Development only: lets scripts load a demo diagram (screenshots, e2e fixtures).
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const w = window as unknown as { __archboardLoad?: (json: unknown) => void };
+    w.__archboardLoad = (json) => loadDiagramIntoDoc(parseDiagram(json), diagram.doc, LOCAL_ORIGIN);
+    return () => {
+      delete w.__archboardLoad;
+    };
+  }, [diagram]);
   const [nodes, setNodes] = useState<FlowNode[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const selectNext = useRef<string | null>(null);
@@ -176,6 +201,7 @@ function Editor({ board }: { board: BoardDoc }) {
   // On laptop widths both panels would squeeze the canvas, so properties start closed there.
   const [rightOpen, setRightOpen] = useState(() => window.innerWidth >= 1280);
   const [groupMenuOpen, setGroupMenuOpen] = useState(false);
+  const [capacityOpen, setCapacityOpen] = useState(false);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [tool, setTool] = useState<Tool>('select');
   const [toolSettings, setToolSettings] = useState<ToolSettings>({
@@ -659,6 +685,8 @@ function Editor({ board }: { board: BoardDoc }) {
       } else if (!mod && key === 'o') {
         setToolSettings((s) => ({ ...s, shape: 'ellipse' }));
         setTool('shape');
+      } else if (!mod && key === 'e') {
+        setCapacityOpen((o) => !o);
       } else if (!mod && key === 't') {
         setTool('text');
       } else if (key === 'g' && e.shiftKey) {
@@ -732,6 +760,7 @@ function Editor({ board }: { board: BoardDoc }) {
     <BoardContext.Provider value={context}>
       <div className="flex h-dvh flex-col bg-canvas">
         <BoardHeader
+          record={record}
           diagram={diagram}
           saved={board.saved}
           persistent={board.persistent}
@@ -836,11 +865,29 @@ function Editor({ board }: { board: BoardDoc }) {
               />
             ) : null}
 
+            {capacityOpen ? (
+              <CapacityPanel
+                diagram={diagram}
+                selectedComponentId={
+                  selectedNodeIds.length === 1 &&
+                  nodes.find((n) => n.id === selectedNodeIds[0])?.type === 'component'
+                    ? (selectedNodeIds[0] ?? null)
+                    : null
+                }
+                onClose={() => setCapacityOpen(false)}
+                onNoteAdded={(id) => {
+                  selectNext.current = id;
+                }}
+              />
+            ) : null}
+
             {groupMenuOpen ? (
               <GroupMenu onPick={groupSelection} onClose={() => setGroupMenuOpen(false)} />
             ) : null}
 
             <Toolbar
+              capacityOpen={capacityOpen}
+              onCapacity={() => setCapacityOpen((o) => !o)}
               tool={tool}
               shape={toolSettings.shape}
               onTool={setTool}
@@ -920,6 +967,7 @@ function Editor({ board }: { board: BoardDoc }) {
 }
 
 function BoardHeader({
+  record,
   diagram,
   saved,
   persistent,
@@ -929,7 +977,12 @@ function BoardHeader({
   saved: boolean;
   persistent: boolean;
   panelToggles?: ReactNode;
+  record: BoardRecord;
 }) {
+  const navigate = useNavigate();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const left = daysLeft(record);
+  const expiry = left === 0 ? 'Deletes today' : `Deletes in ${left} day${left === 1 ? '' : 's'}`;
   const [title, setTitle] = useState(() => String(diagram.meta.get('title') ?? 'Untitled board'));
   useEffect(() => {
     const sync = () => setTitle(String(diagram.meta.get('title') ?? 'Untitled board'));
@@ -968,6 +1021,30 @@ function BoardHeader({
         className="min-w-0 max-w-[40ch] flex-1 truncate rounded-md border border-transparent bg-transparent px-2 py-1 text-md font-semibold hover:border-border focus:border-accent focus:outline-none"
       />
       <div className="ml-auto flex items-center gap-2">
+        <Tooltip
+          content={`One board per person at a time. Boards are deleted automatically ${BOARD_LIFETIME_DAYS} days after they're created. Export anything you want to keep.`}
+        >
+          <button
+            type="button"
+            className="hidden rounded-full sm:inline-flex"
+            aria-label={`${expiry}. About board deletion`}
+          >
+            <Badge tone={left <= 1 ? 'warning' : 'neutral'}>
+              <Clock className="size-3" aria-hidden="true" /> {expiry}
+            </Badge>
+          </button>
+        </Tooltip>
+        <IconButton label="Delete board" onClick={() => setConfirmDelete(true)}>
+          <Trash2 />
+        </IconButton>
+        <ConfirmDialog
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title="Delete this board?"
+          description="Everything on the board will be permanently deleted from this device. This can't be undone."
+          confirmLabel="Delete board"
+          onConfirm={() => void deleteCurrentBoard().then(() => navigate('/'))}
+        />
         {panelToggles}
         {persistent ? (
           <StatusPill status={saved ? 'local' : 'saving'} />
@@ -982,6 +1059,8 @@ function BoardHeader({
 }
 
 function Toolbar(props: {
+  capacityOpen: boolean;
+  onCapacity: () => void;
   tool: Tool;
   shape: ShapeKind;
   onTool: (tool: Tool) => void;
@@ -1037,6 +1116,15 @@ function Toolbar(props: {
         onClick={() => props.onTool('text')}
       >
         <Type />
+      </IconButton>
+      <IconButton
+        label="Capacity estimate (back of the envelope)"
+        shortcut="E"
+        tooltipSide="top"
+        aria-pressed={props.capacityOpen}
+        onClick={props.onCapacity}
+      >
+        <Calculator />
       </IconButton>
       <span className="mx-1 h-5 w-px shrink-0 bg-border" aria-hidden="true" />
       <IconButton

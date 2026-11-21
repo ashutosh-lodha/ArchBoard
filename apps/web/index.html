@@ -3,26 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>ArchBoard: whiteboard system design, one pen at a time</title>
+    <title>ArchBoard: the whiteboard built for system design interviews</title>
     <meta
       name="description"
-      content="A real-time whiteboard for system design interviews. Draw architectures with AWS, Google Cloud and Azure icons, pass the pen, run the interview timer and replay how the design evolved."
+      content="A free whiteboard for system design interviews. Draw architectures with official AWS, Google Cloud and Azure icons, group them into VPCs and size the system with a built-in capacity calculator. No sign-up."
     />
+    <link rel="canonical" href="https://archboard.ashutoshdev.online/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ArchBoard" />
+    <meta
+      property="og:title"
+      content="ArchBoard: the whiteboard built for system design interviews"
+    />
+    <meta
+      property="og:description"
+      content="Drag in real AWS, Google Cloud and Azure components, wire them up, group them into VPCs and size the system with a built-in capacity calculator. Free, no sign-up."
+    />
+    <meta property="og:url" content="https://archboard.ashutoshdev.online/" />
+    <meta property="og:image" content="https://archboard.ashutoshdev.online/landing/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0e1014" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <!-- Apply the saved theme before first paint (no flash). Keep in sync with THEME_BOOTSTRAP_SCRIPT. -->
-    <script>
-      (function () {
-        try {
-          var p = localStorage.getItem('archboard.theme');
-          var d =
-            p === 'dark' ||
-            ((!p || p === 'system') && matchMedia('(prefers-color-scheme: dark)').matches);
-          document.documentElement.dataset.theme = d ? 'dark' : 'light';
-        } catch (e) {}
-      })();
-    </script>
+    <!-- Applies the saved theme before first paint (external file so the CSP can forbid inline scripts). -->
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

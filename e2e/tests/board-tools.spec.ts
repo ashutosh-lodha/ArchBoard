@@ -292,3 +292,24 @@ test('components hold text on the card and can be resized; both survive a reload
   const reloaded = (await lb2.boundingBox())!;
   expect(Math.abs(reloaded.width - after.width)).toBeLessThan(4);
 });
+
+test('capacity calculator: live estimate, then attach it to a component card', async ({ page }) => {
+  await page
+    .getByRole('group', { name: 'Start your design' })
+    .getByRole('button', { name: 'Service' })
+    .click();
+  await expect(node(page, 'Service 1')).toHaveClass(/selected/);
+  await page.keyboard.press('e');
+  const calc = page.getByRole('region', { name: 'Capacity calculator' });
+  await expect(calc).toBeVisible();
+  // Defaults: 10M DAU, 100 reads + 1 write per user per day, 1 KB, 5 years, 3× peak.
+  await expect(calc.getByText('34.7K')).toBeVisible();
+  await expect(calc.getByText('3.65 TB')).toBeVisible();
+  const dau = calc.getByRole('textbox', { name: 'Daily active users' });
+  await dau.fill('abc');
+  await expect(calc.getByRole('alert')).toContainText('Enter numbers in every field');
+  await dau.fill('1000000');
+  await expect(calc.getByText('3.5K')).toBeVisible(); // 1M × 100 / 86,400 × 3
+  await calc.getByRole('button', { name: 'Attach to component' }).click();
+  await expect(node(page, 'Service 1')).toContainText('Capacity (1.0M DAU)');
+});
