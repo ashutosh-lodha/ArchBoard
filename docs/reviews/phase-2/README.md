@@ -46,5 +46,15 @@ New:
 
 Known, not fixed yet: a very fast typist can lose the first one or two characters of a new text box in the ~100 ms before it's visible.
 
+## Slice 3: feedback fixes (pen, boxes and circles with text, component cards)
+
+| # | Reported / found | Cause | Fix |
+|---|---|---|---|
+| 1 | Pen strokes looked right while drawing, then "curved poorly" on release | Converting points to board coordinates applied snap-to-grid, so every point landed on a 4–8 px step: a staircase the smoothing distorted (see `pen-before-release.png` / `pen-after-release.png`) | Ink points skip grid snapping; a test checks the saved stroke's bounds match the live preview within 2 px |
+| 2 | Boxes needed a separate text box to hold text | Shapes only took text on double-click | Drawing a box or circle opens typing right away; new **Box (R)** and **Circle (O)** toolbar tools |
+| 3 | Components from the left panel couldn't be resized or hold text | Fixed-size cards with name only | Cards are resizable (corner and edge handles) and show **text on the card** ("+ Add text", double-click, or the properties panel); both survive reload |
+| 4 | Typing into a new box sometimes went nowhere | Focus retries used animation frames, which slow down or stop in background or slow frames | Retries use timers |
+| 5 | Drawing could be broken by a pointer that can't be captured | `setPointerCapture` threw and aborted the stroke | Wrapped; drawing continues |
+
 ### Next in Phase 2
 Quick-add at the cursor and drop-to-connect, copy/paste, command palette, select-all and nudge, export/import, outline view, performance harness.

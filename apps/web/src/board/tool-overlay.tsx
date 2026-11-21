@@ -47,7 +47,11 @@ export function ToolOverlay({
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId); // keep receiving moves outside the canvas
+    } catch {
+      /* not a capturable pointer (e.g. synthetic); drawing still works */
+    }
     const p = local(e);
     start.current = { x: e.clientX, y: e.clientY };
     if (tool === 'pen') {
@@ -89,7 +93,11 @@ export function ToolOverlay({
           ]
         : points.current;
     const flow = screen.map(([x, y]) => {
-      const p = rf.screenToFlowPosition({ x: x + (rect?.left ?? 0), y: y + (rect?.top ?? 0) });
+      // No grid snapping for ink: snapping turned smooth strokes into staircases.
+      const p = rf.screenToFlowPosition(
+        { x: x + (rect?.left ?? 0), y: y + (rect?.top ?? 0) },
+        { snapToGrid: false },
+      );
       return [Math.round(p.x * 2) / 2, Math.round(p.y * 2) / 2] as [number, number];
     });
     // Drop points closer than 1 flow-px to keep documents small, keep the ends.
@@ -157,7 +165,8 @@ export function ToolOverlay({
         { kind: 'shape', shape: settings.shape, text: '', fill: 'none', size },
         { origin: LOCAL_ORIGIN, at, avoidOverlap: false },
       );
-      onCreated(id, { edit: false, keepTool: false });
+      // Go straight into typing so the box/circle holds text without a separate text box.
+      onCreated(id, { edit: true, keepTool: false });
     } else if (tool === 'text') {
       const id = addNode(
         diagram,

@@ -75,6 +75,8 @@ export const ComponentData = z.object({
   replicas: z.int().min(1).max(10_000).optional(),
   region: z.string().max(40).optional(),
   notes: z.string().max(LIMITS.notes).optional(),
+  /** Short text shown on the card itself (notes stay in the properties panel). */
+  description: z.string().max(LIMITS.description).optional(),
   capacity: CapacityResult.optional(),
 });
 
@@ -84,6 +86,8 @@ export const ComponentNode = z.object({
   iconId: IconId,
   label: z.string().trim().min(1, 'Labels cannot be empty.').max(LIMITS.label),
   data: ComponentData.default({}),
+  /** Set once the user resizes the card; otherwise it sizes to its content. */
+  size: Size.optional(),
 });
 
 export const GroupNode = z.object({

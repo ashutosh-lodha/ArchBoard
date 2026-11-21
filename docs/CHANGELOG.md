@@ -44,3 +44,10 @@ Local boards with IndexedDB autosave; a component panel (search, aliases, provid
 - Google Cloud icons: 2025 core + legacy packs (226), with multi-pack support in the importer. The registry now has 1,193 icons.
 - Fixes: frozen recents order, Shift-click multi-select, text-box focus, no unexpected zoom on first add, atomic icon build.
 - Tests: 8 new e2e scenarios (groups, drag in/out, properties, connections, pen, shapes, text, GCP); 60 e2e checks pass.
+
+### Slice 3: feedback fixes
+- Pen: strokes keep exactly the drawn shape on release (grid snapping no longer applied to ink).
+- Box (R) and Circle (O) tools; drawn shapes open for typing immediately.
+- Components: resizable cards with text on the card (schema: optional `size` and `data.description`, additive).
+- Sturdier focus for new editors; drawing no longer depends on pointer capture.
+- Tests: pen fidelity, box/circle typing, component text and resize across reload; 68 e2e checks pass.

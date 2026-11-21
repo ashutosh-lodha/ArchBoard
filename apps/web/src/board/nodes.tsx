@@ -71,6 +71,10 @@ function Resizer({
 // ---------------------------------------------------------------------------------------------
 // Architecture component
 
+/**
+ * An architecture component: icon + name, optional details text on the card, resizable.
+ * Double-click the name to rename; double-click the text (or "+ Add text") to write details.
+ */
 export const ComponentNode = memo(function ComponentNode({
   id,
   data,
@@ -79,53 +83,110 @@ export const ComponentNode = memo(function ComponentNode({
   const d = data as ComponentNodeData;
   const { diagram, registry, editingId, setEditingId } = useBoard();
   const entry = registry.byId.get(d.iconId);
-  const editing = editingId === id;
+  const editingLabel = editingId === id;
+  const editingText = editingId === `${id}:text`;
   const meta = [d.replicas && d.replicas > 1 ? `×${d.replicas}` : null, d.region]
     .filter(Boolean)
     .join(' · ');
 
+  const setDescription = (text: string) => {
+    const current = (diagram.nodes.get(id)?.get('data') ?? {}) as Record<string, unknown>;
+    const next: Record<string, unknown> = { ...current };
+    if (text.trim()) next.description = text.slice(0, 2000);
+    else delete next.description;
+    updateNode(diagram, id, { data: next }, { origin: LOCAL_ORIGIN });
+  };
+
   return (
-    <div
-      className={cn(
-        'ab-node group relative flex min-w-[152px] max-w-[240px] items-center gap-2.5 rounded-lg border bg-surface px-2.5 py-2 shadow-e1',
-        selected ? 'border-accent ring-2 ring-accent/25' : 'border-border-strong',
-      )}
-      onDoubleClick={(e) => {
-        e.stopPropagation();
-        setEditingId(id);
-      }}
-    >
-      <IconImage iconId={d.iconId} svgPath={entry?.svgPath} category={entry?.category} />
-      <div className="min-w-0 flex-1">
-        {editing ? (
+    <>
+      <Resizer id={id} selected={selected} minWidth={152} minHeight={56} />
+      <div
+        className={cn(
+          'ab-node group relative flex flex-col rounded-lg border bg-surface px-2.5 py-2 shadow-e1',
+          d.sized ? 'size-full' : 'min-w-[152px] max-w-[260px]',
+          selected ? 'border-accent ring-2 ring-accent/25' : 'border-border-strong',
+        )}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          setEditingId(id);
+        }}
+      >
+        <div className="flex min-w-0 items-center gap-2.5">
+          <IconImage iconId={d.iconId} svgPath={entry?.svgPath} category={entry?.category} />
+          <div className="min-w-0 flex-1">
+            {editingLabel ? (
+              <InlineEdit
+                ariaLabel="Component name"
+                value={d.label}
+                className="text-sm font-medium"
+                onCommit={(label) => updateNode(diagram, id, { label }, { origin: LOCAL_ORIGIN })}
+                onDone={() => setEditingId(null)}
+              />
+            ) : (
+              <p
+                className="line-clamp-2 text-sm font-medium leading-tight text-text"
+                title={d.label}
+              >
+                {d.label}
+              </p>
+            )}
+            {meta ? <p className="truncate text-xs text-text-muted">{meta}</p> : null}
+          </div>
+        </div>
+        {editingText ? (
           <InlineEdit
-            ariaLabel="Component name"
-            value={d.label}
-            className="text-sm font-medium"
-            onCommit={(label) => updateNode(diagram, id, { label }, { origin: LOCAL_ORIGIN })}
+            multiline
+            allowEmpty
+            ariaLabel="Component text"
+            placeholder="Add details: responsibilities, numbers, notes…"
+            value={d.description ?? ''}
+            className={cn(
+              'mt-1.5 resize-none text-xs leading-snug',
+              d.sized ? 'min-h-0 flex-1' : 'field-sizing-content min-h-12',
+            )}
+            onCommit={setDescription}
             onDone={() => setEditingId(null)}
           />
-        ) : (
-          <p className="line-clamp-2 text-sm font-medium leading-tight text-text" title={d.label}>
-            {d.label}
+        ) : d.description ? (
+          <p
+            className={cn(
+              'mt-1.5 whitespace-pre-wrap text-xs leading-snug text-text-muted',
+              d.sized && 'min-h-0 flex-1 overflow-hidden',
+            )}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              setEditingId(`${id}:text`);
+            }}
+          >
+            {d.description}
           </p>
-        )}
-        {meta ? <p className="truncate text-xs text-text-muted">{meta}</p> : null}
+        ) : selected ? (
+          <button
+            type="button"
+            className="nodrag mt-1 self-start rounded px-1 text-xs font-medium text-accent hover:bg-accent-subtle"
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingId(`${id}:text`);
+            }}
+          >
+            + Add text
+          </button>
+        ) : null}
+        {entry && entry.provider !== 'generic' ? (
+          <span className="absolute -top-2 right-2 rounded-sm border border-border bg-surface px-1 text-[10px] font-semibold uppercase leading-4 text-text-muted">
+            {entry.provider}
+          </span>
+        ) : null}
+        {d.replicas && d.replicas > 1 ? (
+          // Stacked-card hint for replicated services.
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 -z-10 translate-x-1 translate-y-1 rounded-lg border border-border-strong bg-surface"
+          />
+        ) : null}
+        <Handles />
       </div>
-      {entry && entry.provider !== 'generic' ? (
-        <span className="absolute -top-2 right-2 rounded-sm border border-border bg-surface px-1 text-[10px] font-semibold uppercase leading-4 text-text-muted">
-          {entry.provider}
-        </span>
-      ) : null}
-      {d.replicas && d.replicas > 1 ? (
-        // Stacked-card hint for replicated services.
-        <span
-          aria-hidden="true"
-          className="absolute inset-0 -z-10 translate-x-1 translate-y-1 rounded-lg border border-border-strong bg-surface"
-        />
-      ) : null}
-      <Handles />
-    </div>
+    </>
   );
 });
 
@@ -298,6 +359,7 @@ export const ShapeNode = memo(function ShapeNode({ id, data, selected }: NodePro
               multiline
               allowEmpty
               ariaLabel="Shape text"
+              placeholder="Type…"
               value={d.text}
               className="field-sizing-content resize-none text-center"
               onCommit={(text) => updateNode(diagram, id, { text }, { origin: LOCAL_ORIGIN })}

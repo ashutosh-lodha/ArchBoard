@@ -211,3 +211,84 @@ test('Google Cloud icons are searchable in the GCP tab', async ({ page }) => {
   await tile.click();
   await expect(node(page, 'Pub/Sub')).toContainText('gcp');
 });
+
+test('pen: the saved stroke matches what was drawn (no snapping on release)', async ({ page }) => {
+  await page.keyboard.press('d');
+  const ov = page.locator('[aria-label^="Drawing area"]');
+  const r = (await ov.boundingBox())!;
+  const cx = r.x + 300;
+  const cy = r.y + 220;
+  await page.mouse.move(cx + 100, cy);
+  await page.mouse.down();
+  for (let i = 1; i <= 80; i++) {
+    const a = (i / 80) * Math.PI * 2;
+    await page.mouse.move(cx + 100 * Math.cos(a), cy + 60 * Math.sin(a));
+  }
+  const preview = await ov.locator('svg path').evaluate((el) => {
+    const b = el.getBoundingClientRect();
+    return [b.x, b.y, b.width, b.height];
+  });
+  await page.mouse.up();
+  const final = await page
+    .locator('.react-flow__node-drawing path')
+    .nth(1)
+    .evaluate((el) => {
+      const b = el.getBoundingClientRect();
+      return [b.x, b.y, b.width, b.height];
+    });
+  preview.forEach((v, i) => expect(Math.abs(v - (final[i] ?? 0))).toBeLessThanOrEqual(2));
+});
+
+for (const [key, kind, word] of [
+  ['r', 'Box', 'Clients'],
+  ['o', 'Circle', 'Users'],
+] as const) {
+  test(`${kind} tool: drag to draw, then type straight away`, async ({ page }) => {
+    await page.keyboard.press(key);
+    const area = page.getByRole('application', { name: 'Drag to draw a shape' });
+    const box = (await area.boundingBox())!;
+    await page.mouse.move(box.x + 120, box.y + 120);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 280, box.y + 220, { steps: 8 });
+    await page.mouse.up();
+    const text = page.getByRole('textbox', { name: 'Shape text' });
+    await expect(text).toBeFocused();
+    await page.keyboard.type(word);
+    await page.keyboard.press('ControlOrMeta+Enter');
+    await expect(page.locator('.react-flow__node-shape')).toContainText(word);
+  });
+}
+
+test('components hold text on the card and can be resized; both survive a reload', async ({
+  page,
+}) => {
+  await page
+    .getByRole('group', { name: 'Start your design' })
+    .getByRole('button', { name: 'Load Balancer' })
+    .click();
+  const lb = node(page, 'Load Balancer 1');
+  await expect(lb).toHaveClass(/selected/);
+  await lb.getByRole('button', { name: '+ Add text' }).click();
+  const text = page.getByRole('textbox', { name: 'Component text' });
+  await expect(text).toBeFocused();
+  await page.keyboard.type('L7, TLS termination');
+  await page.keyboard.press('ControlOrMeta+Enter');
+  await expect(lb).toContainText('L7, TLS termination');
+
+  const before = (await lb.boundingBox())!;
+  const handle = lb.locator('.react-flow__resize-control.bottom.right');
+  const h = (await handle.boundingBox())!;
+  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(h.x + 120, h.y + 90, { steps: 10 });
+  await page.mouse.up();
+  const after = (await lb.boundingBox())!;
+  expect(after.width).toBeGreaterThan(before.width + 60);
+  expect(after.height).toBeGreaterThan(before.height + 40);
+
+  await page.reload();
+  const lb2 = node(page, 'Load Balancer 1');
+  await expect(lb2).toContainText('L7, TLS termination');
+  const reloaded = (await lb2.boundingBox())!;
+  expect(Math.abs(reloaded.width - after.width)).toBeLessThan(4);
+});

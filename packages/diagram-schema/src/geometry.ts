@@ -30,7 +30,7 @@ export function nodeSize(node: DiagramNode, measure?: Measure): Size {
     case 'text':
       return DEFAULT_TEXT_SIZE;
     case 'component':
-      return DEFAULT_COMPONENT_SIZE;
+      return node.size ?? DEFAULT_COMPONENT_SIZE;
   }
 }
 

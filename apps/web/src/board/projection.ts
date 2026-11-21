@@ -18,6 +18,9 @@ export type ComponentNodeData = {
   label: string;
   replicas?: number;
   region?: string;
+  description?: string;
+  /** True once the user has resized the card (it then has a fixed size). */
+  sized?: boolean;
 };
 export type NoteNodeData = { kind: 'note'; text: string; color: string };
 export type GroupNodeData = { kind: 'group'; label: string; groupType: string };
@@ -55,12 +58,15 @@ function toFlowNode(n: DiagramNode): FlowNode {
       return {
         ...base,
         type: 'component',
+        ...(n.size ? { style: { width: n.size.width, height: n.size.height } } : {}),
         data: {
           kind: 'component',
           iconId: n.iconId,
           label: n.label,
           ...(n.data?.replicas ? { replicas: n.data.replicas } : {}),
           ...(n.data?.region ? { region: n.data.region } : {}),
+          ...(n.data?.description ? { description: n.data.description } : {}),
+          ...(n.size ? { sized: true } : {}),
         },
       };
     case 'note':

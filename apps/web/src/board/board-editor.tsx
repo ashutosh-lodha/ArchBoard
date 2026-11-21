@@ -654,6 +654,10 @@ function Editor({ board }: { board: BoardDoc }) {
       } else if (!mod && key === 'd') {
         setTool('pen');
       } else if (!mod && key === 'r') {
+        setToolSettings((s) => ({ ...s, shape: 'rectangle' }));
+        setTool('shape');
+      } else if (!mod && key === 'o') {
+        setToolSettings((s) => ({ ...s, shape: 'ellipse' }));
         setTool('shape');
       } else if (!mod && key === 't') {
         setTool('text');
@@ -838,7 +842,12 @@ function Editor({ board }: { board: BoardDoc }) {
 
             <Toolbar
               tool={tool}
+              shape={toolSettings.shape}
               onTool={setTool}
+              onShape={(shape) => {
+                setToolSettings((s) => ({ ...s, shape }));
+                setTool('shape');
+              }}
               canUndo={history.canUndo}
               canRedo={history.canRedo}
               onUndo={() => undo.undo()}
@@ -974,7 +983,9 @@ function BoardHeader({
 
 function Toolbar(props: {
   tool: Tool;
+  shape: ShapeKind;
   onTool: (tool: Tool) => void;
+  onShape: (shape: ShapeKind) => void;
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
@@ -984,30 +995,59 @@ function Toolbar(props: {
   onZoomOut: () => void;
   onFit: () => void;
 }) {
-  const tools: Array<[Tool, string, string, ReactNode]> = [
-    ['select', 'Select and move', 'V', <MousePointer2 key="i" />],
-    ['pen', 'Pen: draw freehand', 'D', <Pencil key="i" />],
-    ['shape', 'Shape: drag to draw', 'R', <Square key="i" />],
-    ['text', 'Text box: click to type', 'T', <Type key="i" />],
-  ];
+  const isCircle = props.tool === 'shape' && props.shape === 'ellipse';
+  const isBox = props.tool === 'shape' && !isCircle;
   return (
     <div
       role="toolbar"
       aria-label="Board tools"
       className="absolute bottom-4 left-1/2 z-10 flex max-w-[calc(100%-24px)] -translate-x-1/2 items-center gap-0.5 overflow-x-auto rounded-lg border border-border bg-surface p-1 shadow-e2"
     >
-      {tools.map(([t, label, key, icon]) => (
-        <IconButton
-          key={t}
-          label={label}
-          shortcut={key}
-          tooltipSide="top"
-          aria-pressed={props.tool === t}
-          onClick={() => props.onTool(t)}
-        >
-          {icon}
-        </IconButton>
-      ))}
+      <IconButton
+        label="Select and move"
+        shortcut="V"
+        tooltipSide="top"
+        aria-pressed={props.tool === 'select'}
+        onClick={() => props.onTool('select')}
+      >
+        <MousePointer2 />
+      </IconButton>
+      <IconButton
+        label="Pen: draw freehand"
+        shortcut="D"
+        tooltipSide="top"
+        aria-pressed={props.tool === 'pen'}
+        onClick={() => props.onTool('pen')}
+      >
+        <Pencil />
+      </IconButton>
+      <IconButton
+        label="Box: drag to draw, then type inside"
+        shortcut="R"
+        tooltipSide="top"
+        aria-pressed={isBox}
+        onClick={() => props.onShape('rectangle')}
+      >
+        <Square />
+      </IconButton>
+      <IconButton
+        label="Circle: drag to draw, then type inside"
+        shortcut="O"
+        tooltipSide="top"
+        aria-pressed={isCircle}
+        onClick={() => props.onShape('ellipse')}
+      >
+        <Circle />
+      </IconButton>
+      <IconButton
+        label="Text box: click to type"
+        shortcut="T"
+        tooltipSide="top"
+        aria-pressed={props.tool === 'text'}
+        onClick={() => props.onTool('text')}
+      >
+        <Type />
+      </IconButton>
       <span className="mx-1 h-5 w-px shrink-0 bg-border" aria-hidden="true" />
       <IconButton
         label="Undo"

@@ -201,7 +201,8 @@ function BoardTips() {
   const tips: Array<[string, ReactNode]> = [
     ['Add a component', <Kbd key="k">/</Kbd>],
     ['Draw with the pen', <Kbd key="k">D</Kbd>],
-    ['Add a shape', <Kbd key="k">R</Kbd>],
+    ['Draw a box (type inside)', <Kbd key="k">R</Kbd>],
+    ['Draw a circle (type inside)', <Kbd key="k">O</Kbd>],
     ['Add text', <Kbd key="k">T</Kbd>],
     ['Group the selection', <Kbd key="k">G</Kbd>],
     ['Rename the selection', <Kbd key="k">Enter</Kbd>],
@@ -351,7 +352,23 @@ function NodeProperties(props: PropertiesPanelProps & { node: DiagramNode }) {
                 />
               </Field>
             </div>
-            <Field id={`${uid}-notes`} label="Notes">
+            <Field
+              id={`${uid}-text`}
+              label="Text on card"
+              hint="Shown on the board under the name. Resize the card to fit more."
+            >
+              <CommitInput
+                multiline
+                placeholder="Responsibilities, numbers, notes…"
+                value={data.description ?? ''}
+                onCommit={(v) => setData({ description: v.trim() ? v.slice(0, 2000) : undefined })}
+              />
+            </Field>
+            <Field
+              id={`${uid}-notes`}
+              label="Notes"
+              hint="Kept here in the panel; not drawn on the board."
+            >
               <CommitInput
                 multiline
                 placeholder="Design notes, assumptions, numbers…"

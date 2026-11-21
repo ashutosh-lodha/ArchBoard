@@ -31,7 +31,7 @@ export function InlineEdit({
   useEffect(() => {
     // A just-created node stays invisible until React Flow has measured it, and hidden elements
     // can't take focus — so keep trying for a few frames until focus actually lands.
-    let frame = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     let tries = 0;
     const tryFocus = () => {
       const el = ref.current;
@@ -41,10 +41,11 @@ export function InlineEdit({
         el.select();
         return;
       }
-      if (tries++ < 20) frame = requestAnimationFrame(tryFocus);
+      // Timers keep running when animation frames are throttled (slow or background frames).
+      if (tries++ < 60) timer = setTimeout(tryFocus, 16);
     };
     tryFocus();
-    return () => cancelAnimationFrame(frame);
+    return () => clearTimeout(timer);
   }, []);
 
   const finish = (save: boolean) => {

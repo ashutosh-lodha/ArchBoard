@@ -31,6 +31,7 @@ const nodeBody = fc.oneof(
           replicas: fc.integer({ min: 1, max: 50 }),
           region: fc.constantFrom('ap-south-1', 'us-east-1'),
           notes: fc.string({ maxLength: 40 }),
+          description: fc.string({ maxLength: 40 }),
         },
         { requiredKeys: [] },
       ),
