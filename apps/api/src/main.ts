@@ -2,28 +2,48 @@ import { createServer } from 'node:http';
 import { Redis } from 'ioredis';
 import { createPrismaClient } from '@archboard/db';
 import { createLogger } from '@archboard/shared/logger';
-import { createApp } from './app.ts';
+import { createApp, type HealthCheck } from './app.ts';
+import { clerkAuthenticate } from './auth.ts';
+import { createPrismaBoardStore } from './boards/prisma-store.ts';
+import { startExpiryJob } from './boards/routes.ts';
 import { loadApiEnv } from './env.ts';
 
 const env = loadApiEnv();
 const logger = createLogger('api', env.LOG_LEVEL);
-const prisma = createPrismaClient({ connectionString: env.DATABASE_URL });
-const redis = new Redis(env.REDIS_URL, { maxRetriesPerRequest: 2, lazyConnect: false });
-redis.on('error', (err) => logger.warn({ err }, 'redis error'));
+const prisma = createPrismaClient({ connectionString: env.DATABASE_URL, maxConnections: 5 });
+const redis = env.REDIS_URL
+  ? new Redis(env.REDIS_URL, { maxRetriesPerRequest: 2, lazyConnect: false })
+  : null;
+redis?.on('error', (err) => logger.warn({ err }, 'redis error'));
 
+const checks: Record<string, HealthCheck> = {
+  database: async () => {
+    await prisma.$queryRaw`SELECT 1`;
+  },
+};
+if (redis) {
+  checks.redis = async () => {
+    await redis.ping();
+  };
+}
+
+const store = createPrismaBoardStore(prisma);
 const app = createApp({
   logger,
   trustProxy: env.TRUST_PROXY,
   version: process.env.APP_VERSION ?? 'dev',
-  checks: {
-    database: async () => {
-      await prisma.$queryRaw`SELECT 1`;
-    },
-    redis: async () => {
-      await redis.ping();
-    },
+  checks,
+  boards: {
+    store,
+    authenticate: clerkAuthenticate({
+      jwtKey: env.CLERK_JWT_KEY,
+      secretKey: env.CLERK_SECRET_KEY,
+      authorizedParties: [env.PUBLIC_ORIGIN],
+      logger,
+    }),
   },
 });
+const stopExpiryJob = startExpiryJob(store, logger);
 
 const server = createServer(app);
 server.listen(env.API_PORT, () => logger.info({ port: env.API_PORT }, 'api listening'));
@@ -36,8 +56,9 @@ async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, 'shutting down');
   const force = setTimeout(() => process.exit(1), 10_000);
   force.unref();
+  stopExpiryJob();
   server.close();
-  await Promise.allSettled([prisma.$disconnect(), redis.quit()]);
+  await Promise.allSettled([prisma.$disconnect(), redis?.quit()]);
   process.exit(0);
 }
 process.on('SIGTERM', () => void shutdown('SIGTERM'));

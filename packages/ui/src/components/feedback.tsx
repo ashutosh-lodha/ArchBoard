@@ -141,7 +141,7 @@ export function Banner({
 export type SaveStatus = 'saved' | 'saving' | 'offline' | 'error' | 'local';
 
 const statusCopy: Record<SaveStatus, { label: string; dot: string; text: string }> = {
-  saved: { label: 'Saved', dot: 'bg-success', text: 'text-text-muted' },
+  saved: { label: 'Saved to your account', dot: 'bg-success', text: 'text-text-muted' },
   saving: {
     label: 'Saving…',
     dot: 'bg-text-faint animate-pulse motion-reduce:animate-none',

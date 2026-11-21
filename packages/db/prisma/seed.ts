@@ -81,6 +81,7 @@ async function seedBoard(ownerId: string, id: string, diagram: DiagramV1): Promi
       id,
       ownerId,
       title: diagram.meta.title,
+      content: state,
       members: { create: { userId: ownerId, role: 'OWNER' } },
       snapshots: { create: { upToSeq: 0n, sizeBytes: state.byteLength, data: state } },
     },
@@ -94,7 +95,13 @@ async function main(): Promise<void> {
     create: { clerkId: 'seed_user', name: 'Seed User', email: null },
   });
   await seedBoard(user.id, 'seed-url-shortener', urlShortener);
-  await seedBoard(user.id, 'seed-blank', blank);
+  // Board policy: one board per person, so the blank board belongs to a second seed user.
+  const second = await prisma.user.upsert({
+    where: { clerkId: 'seed_user_2' },
+    update: {},
+    create: { clerkId: 'seed_user_2', name: 'Seed User 2', email: null },
+  });
+  await seedBoard(second.id, 'seed-blank', blank);
   const boards = await prisma.board.count();
   console.log(`Seeded: user ${user.id}, ${boards} board(s) in total.`);
 }

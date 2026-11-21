@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Point "current" back at an earlier release (default: the previous one).
+# Roll back: point "current" at an earlier web release (default: the previous one) and switch
+# the API back to its previous image.
 #   usage: rollback-web.sh <host> [release-id]
 set -euo pipefail
 HOST="$1"
@@ -14,5 +15,6 @@ TARGET="${1:-$(ls -1t | grep -v -e "^$CURRENT\$" -e '^placeholder$' | head -n 1)
 ln -sfn "$ROOT/releases/$TARGET" "$ROOT/current.tmp"
 mv -T "$ROOT/current.tmp" "$ROOT/current"
 echo "$TARGET" > "$ROOT/CURRENT_RELEASE"
-echo "rolled back from $CURRENT to $TARGET"
+echo "web rolled back from $CURRENT to $TARGET"
+sudo /usr/local/bin/archboard-stack rollback || echo "api: nothing to roll back"
 REMOTE

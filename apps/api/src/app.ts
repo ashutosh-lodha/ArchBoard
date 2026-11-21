@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import { isAppError, NotFoundError } from '@archboard/shared/errors';
 import type { Logger } from '@archboard/shared/logger';
+import { boardRoutes, type BoardRouteDeps } from './boards/routes.ts';
 
 /** A named dependency check for the readiness probe (database, Redis, …). */
 export type HealthCheck = () => Promise<void>;
@@ -13,6 +14,8 @@ export interface AppDeps {
   checks: Record<string, HealthCheck>;
   trustProxy?: number;
   version?: string;
+  /** Board storage. Omitted in tests that only cover health checks. */
+  boards?: Omit<BoardRouteDeps, 'logger'>;
 }
 
 const READY_TIMEOUT_MS = 2000;
@@ -34,7 +37,7 @@ function withTimeout(promise: Promise<void>, ms: number): Promise<void> {
 }
 
 /**
- * Build the Express app. Routes → controllers → services; this phase only has health checks.
+ * Build the Express app: health checks and the board API (routes → store).
  * Kept free of process-level side effects so tests can create as many apps as they like.
  */
 export function createApp(deps: AppDeps): Express {
@@ -81,6 +84,8 @@ export function createApp(deps: AppDeps): Express {
       .status(ok ? 200 : 503)
       .json({ status: ok ? 'ok' : 'degraded', checks: Object.fromEntries(results) });
   }) as RequestHandler);
+
+  if (deps.boards) app.use('/api', boardRoutes({ ...deps.boards, logger: deps.logger }));
 
   app.use('/api', (_req, _res, next) => next(new NotFoundError('Endpoint')));
 

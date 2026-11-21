@@ -1,6 +1,6 @@
 # ArchBoard
 
-**The whiteboard built for system design interviews.**
+**The board built for system design interviews.**
 
 Drag in real AWS, Google Cloud and Azure components, wire them up, group them into regions and VPCs, write details on every card, sketch with a pen, and size the system with a built-in capacity calculator, all in your browser.
 

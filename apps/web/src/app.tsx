@@ -2,6 +2,7 @@ import { ThemeProvider, Toaster, TooltipProvider, useTheme } from '@archboard/ui
 import { lazy, Suspense, useSyncExternalStore } from 'react';
 import { createBrowserRouter, type RouteObject } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
+import { AccountProvider } from './auth/account.tsx';
 import { HomePage } from './routes/home.tsx';
 import { NotFoundPage, RouteError } from './routes/errors.tsx';
 import { NewBoardPage } from './routes/new-board.tsx';
@@ -54,10 +55,12 @@ function ThemedToaster() {
 export function App() {
   return (
     <ThemeProvider>
-      <TooltipProvider delayDuration={400} skipDelayDuration={200}>
-        <RouterProvider router={router} />
-        <ThemedToaster />
-      </TooltipProvider>
+      <AccountProvider>
+        <TooltipProvider delayDuration={400} skipDelayDuration={200}>
+          <RouterProvider router={router} />
+          <ThemedToaster />
+        </TooltipProvider>
+      </AccountProvider>
     </ThemeProvider>
   );
 }

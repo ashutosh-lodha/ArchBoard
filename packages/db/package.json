@@ -20,11 +20,11 @@
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
     "pg": "8.23.1",
+    "prisma": "7.10.1",
     "yjs": "13.6.33"
   },
   "devDependencies": {
     "@archboard/config": "workspace:*",
-    "@types/pg": "8.23.1",
-    "prisma": "7.10.1"
+    "@types/pg": "8.23.1"
   }
 }

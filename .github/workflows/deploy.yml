@@ -1,8 +1,15 @@
 name: Deploy
 
-# Deploys the web app to the production VM after CI passes on main, or on demand.
-# Needs repository secrets: VM_HOST (the VM's static IP) and VM_SSH_KEY (private key for the
-# VM's "deploy" user). Rollback: run this workflow manually with "rollback" set.
+# Deploys ArchBoard to the production VM after CI passes on main, or on demand:
+#   1. build the web app (with the Clerk publishable key) and the API Docker image
+#   2. API: upload the image, run database migrations, swap the container (auto-rollback if the
+#      new one fails its health check)
+#   3. web: upload the build and switch to it atomically; apply the nginx config if it changed
+#   4. smoke-test the live site and API over HTTPS
+#
+# Repository variables (public values): VM_HOST, CLERK_PUBLISHABLE_KEY, CLERK_JWT_KEY
+# Repository secret: VM_SSH_KEY (private key of the VM's "deploy" user)
+# Rollback: run this workflow manually with "rollback" ticked.
 
 on:
   workflow_run:
@@ -12,11 +19,11 @@ on:
   workflow_dispatch:
     inputs:
       rollback:
-        description: 'Roll back instead of deploying (optionally to a specific release id)'
+        description: 'Roll back the web app and API instead of deploying'
         type: boolean
         default: false
       release:
-        description: 'Release id to roll back to (blank = previous)'
+        description: 'Web release id to roll back to (blank = previous)'
         required: false
 
 concurrency:
@@ -26,11 +33,15 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  SITE: https://archboard.ashutoshdev.online
+  ROLLBACK: ${{ github.event_name == 'workflow_dispatch' && inputs.rollback }}
+
 jobs:
   deploy:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     environment:
       name: production
       url: https://archboard.ashutoshdev.online
@@ -48,33 +59,57 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
 
       - name: Roll back
-        if: github.event_name == 'workflow_dispatch' && inputs.rollback
-        run: bash infra/scripts/rollback-web.sh "${{ secrets.VM_HOST }}" "${{ inputs.release }}"
+        if: env.ROLLBACK == 'true'
+        run: bash infra/scripts/rollback-web.sh "${{ vars.VM_HOST }}" "${{ inputs.release }}"
 
       - uses: pnpm/action-setup@v4
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.rollback) }}
+        if: env.ROLLBACK != 'true'
       - uses: actions/setup-node@v4
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.rollback) }}
+        if: env.ROLLBACK != 'true'
         with:
           node-version-file: .nvmrc
           cache: pnpm
 
-      - name: Build
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.rollback) }}
+      - name: Build web
+        if: env.ROLLBACK != 'true'
+        env:
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
         run: |
           pnpm install --frozen-lockfile
           pnpm icons:import
           pnpm --filter @archboard/web build
 
-      - name: Deploy (atomic switch)
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.rollback) }}
-        run: bash infra/scripts/deploy-web.sh "${{ secrets.VM_HOST }}" "$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}" apps/web/dist
+      - name: Build API image
+        if: env.ROLLBACK != 'true'
+        run: |
+          docker build -f infra/docker/api.Dockerfile --build-arg APP_VERSION=${GITHUB_SHA::7} -t archboard-api:current .
+          docker save archboard-api:current | gzip -1 > /tmp/api-image.tar.gz
+          ls -lh /tmp/api-image.tar.gz
+
+      - name: Deploy API (migrate, swap, auto-rollback)
+        if: env.ROLLBACK != 'true'
+        env:
+          CLERK_JWT_KEY: ${{ vars.CLERK_JWT_KEY }}
+        run: |
+          # Public configuration only. The database password is generated on the VM and never leaves it.
+          {
+            echo "PUBLIC_ORIGIN=$SITE"
+            echo "LOG_LEVEL=info"
+            echo "APP_VERSION=${GITHUB_SHA::7}"
+            printf 'CLERK_JWT_KEY=%s\n' "$(printf '%s' "$CLERK_JWT_KEY" | awk 'BEGIN{ORS="\\n"} {print}' | sed 's/\\n$//')"
+          } > /tmp/app.env
+          bash infra/scripts/deploy-api.sh "${{ vars.VM_HOST }}" /tmp/api-image.tar.gz /tmp/app.env
+
+      - name: Deploy web (atomic switch)
+        if: env.ROLLBACK != 'true'
+        run: bash infra/scripts/deploy-web.sh "${{ vars.VM_HOST }}" "$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}" apps/web/dist
 
       - name: Smoke test
         run: |
-          for i in 1 2 3 4 5 6; do
-            if curl -fsS --max-time 10 https://archboard.ashutoshdev.online/ | grep -q '<title>ArchBoard'; then
-              echo "site is up"; exit 0
+          for i in $(seq 1 12); do
+            if curl -fsS --max-time 10 "$SITE/" | grep -q '<title>ArchBoard' \
+               && curl -fsS --max-time 10 "$SITE/api/health/ready" | grep -q '"ok"'; then
+              echo "site and API are up"; exit 0
             fi
             sleep 10
           done

@@ -100,7 +100,8 @@ import { ToolOverlay, type Tool, type ToolSettings } from './tool-overlay.tsx';
 import { ICON_DRAG_TYPE, Palette, pushRecent } from './palette.tsx';
 import { project, type FlowNode, type Projection } from './projection.ts';
 import { GENERIC_REGISTRY, loadRegistry, type LoadedRegistry } from './registry.ts';
-import { LOCAL_ORIGIN, type BoardDoc } from './use-board-doc.ts';
+import { AccountButton } from '../auth/account.tsx';
+import { LOCAL_ORIGIN, type BoardDoc, type CloudStatus } from './use-board-doc.ts';
 
 const QUICK_STARTS = ['generic/load-balancer', 'generic/service', 'generic/sql-db'] as const;
 
@@ -144,15 +145,22 @@ function useProjection(diagram: DiagramDoc): Projection {
   return projection;
 }
 
-export function BoardEditor({ board, record }: { board: BoardDoc; record: BoardRecord }) {
+export interface BoardEditorProps {
+  board: BoardDoc;
+  record: BoardRecord;
+  /** Delete the board for good. Defaults to deleting the browser-only board. */
+  onDeleteBoard?: () => Promise<void>;
+}
+
+export function BoardEditor(props: BoardEditorProps) {
   return (
     <ReactFlowProvider>
-      <Editor board={board} record={record} />
+      <Editor {...props} />
     </ReactFlowProvider>
   );
 }
 
-function Editor({ board, record }: { board: BoardDoc; record: BoardRecord }) {
+function Editor({ board, record, onDeleteBoard = deleteCurrentBoard }: BoardEditorProps) {
   const { diagram, undo } = board;
   const { resolved } = useTheme();
   const rf = useReactFlow();
@@ -764,6 +772,8 @@ function Editor({ board, record }: { board: BoardDoc; record: BoardRecord }) {
           diagram={diagram}
           saved={board.saved}
           persistent={board.persistent}
+          cloud={board.cloud}
+          onDeleteBoard={onDeleteBoard}
           panelToggles={
             isDesktop ? (
               <>
@@ -971,11 +981,15 @@ function BoardHeader({
   diagram,
   saved,
   persistent,
+  cloud,
+  onDeleteBoard,
   panelToggles,
 }: {
   diagram: DiagramDoc;
   saved: boolean;
   persistent: boolean;
+  cloud: CloudStatus;
+  onDeleteBoard: () => Promise<void>;
   panelToggles?: ReactNode;
   record: BoardRecord;
 }) {
@@ -1041,18 +1055,33 @@ function BoardHeader({
           open={confirmDelete}
           onOpenChange={setConfirmDelete}
           title="Delete this board?"
-          description="Everything on the board will be permanently deleted from this device. This can't be undone."
+          description={
+            cloud === 'off'
+              ? "Everything on the board will be permanently deleted from this device. This can't be undone."
+              : "Everything on the board will be permanently deleted from your account. This can't be undone."
+          }
           confirmLabel="Delete board"
-          onConfirm={() => void deleteCurrentBoard().then(() => navigate('/'))}
+          onConfirm={() => {
+            onDeleteBoard().then(
+              () => navigate('/'),
+              (err: unknown) =>
+                toast.error(err instanceof Error ? err.message : "Couldn't delete the board."),
+            );
+          }}
         />
         {panelToggles}
-        {persistent ? (
+        {cloud !== 'off' ? (
+          <StatusPill
+            status={saved && cloud === 'saved' ? 'saved' : cloud === 'saved' ? 'saving' : cloud}
+          />
+        ) : persistent ? (
           <StatusPill status={saved ? 'local' : 'saving'} />
         ) : (
           <span className="text-sm text-warning" role="status">
             This browser can't save boards — changes are lost on reload
           </span>
         )}
+        <AccountButton compact />
       </div>
     </header>
   );

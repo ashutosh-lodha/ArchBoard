@@ -1,0 +1,64 @@
+# Production services on archboard-vm, next to Caddy (which runs on the host and proxies /api).
+# Managed by /usr/local/bin/archboard-stack (see infra/vm/startup.sh); never edited by hand.
+#   secrets.env  POSTGRES_PASSWORD, generated on the VM at first boot, never leaves it
+#   app.env      public configuration shipped by the deploy (origin, Clerk JWT public key)
+name: archboard
+
+services:
+  postgres:
+    image: postgres:16.6-alpine
+    restart: unless-stopped
+    env_file: [secrets.env]
+    environment:
+      POSTGRES_USER: archboard
+      POSTGRES_DB: archboard
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U archboard -d archboard']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 384m
+    # Not published: only the api container can reach it.
+
+  migrate:
+    image: archboard-api:current
+    env_file: [secrets.env, app.env]
+    environment:
+      DATABASE_URL: postgresql://archboard:${POSTGRES_PASSWORD}@postgres:5432/archboard
+    working_dir: /repo/packages/db
+    command: ['node_modules/.bin/prisma', 'migrate', 'deploy']
+    depends_on:
+      postgres: { condition: service_healthy }
+    profiles: [migrate]
+
+  api:
+    image: archboard-api:current
+    restart: unless-stopped
+    env_file: [secrets.env, app.env]
+    environment:
+      NODE_ENV: production
+      API_PORT: '3000'
+      DATABASE_URL: postgresql://archboard:${POSTGRES_PASSWORD}@postgres:5432/archboard
+    ports: ['127.0.0.1:3000:3000']
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    mem_limit: 384m
+    logging:
+      driver: json-file
+      options: { max-size: 10m, max-file: '3' }
+
+volumes:
+  pgdata:

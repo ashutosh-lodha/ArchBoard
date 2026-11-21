@@ -80,6 +80,11 @@ model Board {
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   lastActivityAt DateTime           @default(now())
+  /// Board policy: deleted automatically 7 days after creation (hourly cleanup job + checked on
+  /// every request). One live board per owner is enforced by a partial unique index (migration).
+  expiresAt      DateTime           @default(dbgenerated("(now() + '7 days'::interval)"))
+  /// The board's Yjs document: every saved update merged into one state (Y.mergeUpdates).
+  content        Bytes?
   /// Soft delete: the UI offers Undo, and boards are purged after 30 days.
   deletedAt      DateTime?
   members        BoardMember[]
@@ -93,6 +98,7 @@ model Board {
   aiJobs         AiJob[]
 
   @@index([ownerId, deletedAt, lastActivityAt(sort: Desc)])
+  @@index([expiresAt])
 }
 
 model BoardMember {

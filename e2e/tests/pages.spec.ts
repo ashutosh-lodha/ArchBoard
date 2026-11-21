@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test';
  * home page crashed in Phase 1 while the gallery, the only page under test, was fine.)
  */
 const pages = [
-  { path: '/', heading: /whiteboard built for system design interviews/ },
+  { path: '/', heading: /board built for system design interviews/ },
   { path: '/this-page-does-not-exist', heading: 'Page not found' },
 ] as const;
 

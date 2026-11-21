@@ -16,13 +16,14 @@ import {
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
+import { AccountButton } from '../auth/account.tsx';
 import { BOARD_LIFETIME_DAYS } from '../board/local-boards.ts';
 
 const REPO_URL = 'https://github.com/ashutosh-lodha/ArchBoard';
 
 /**
- * Landing page. Every claim here describes something that works today; planned features are
- * listed separately under "On the roadmap". No testimonials, logos or usage numbers.
+ * Landing page. Every claim here describes something that works today. No testimonials, logos
+ * or usage numbers.
  */
 export function HomePage() {
   return (
@@ -33,7 +34,6 @@ export function HomePage() {
         <Features />
         <HowItWorks />
         <Rules />
-        <Roadmap />
         <FinalCta />
       </main>
       <SiteFooter />
@@ -65,7 +65,6 @@ function SiteHeader() {
             ['#features', 'Features'],
             ['#how', 'How it works'],
             ['#rules', 'The rules'],
-            ['#roadmap', 'Roadmap'],
           ].map(([href, label]) => (
             <a
               key={href}
@@ -83,6 +82,7 @@ function SiteHeader() {
           >
             {resolved === 'dark' ? <Sun /> : <Moon />}
           </IconButton>
+          <AccountButton compact />
           <Button asChild variant="primary" size="sm">
             <Link to="/new">Start a board</Link>
           </Button>
@@ -95,35 +95,67 @@ function SiteHeader() {
 function Hero() {
   const { resolved } = useTheme();
   return (
-    <section className="relative overflow-hidden border-b border-border bg-[radial-gradient(ellipse_at_top,var(--accent-subtle),transparent_60%)]">
-      <div className="mx-auto max-w-6xl px-4 pb-12 pt-14 sm:pt-20">
-        <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-sm text-text-muted">
-          <span className="size-1.5 rounded-full bg-success" aria-hidden="true" /> Free · no sign-up
-          needed
+    <section className="relative isolate overflow-hidden border-b border-border">
+      {/* Canvas-style dot grid that fades out, plus a soft accent glow behind the headline. */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 -z-10 bg-[radial-gradient(var(--border-strong)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,#000_40%,transparent_100%)] opacity-60"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute left-1/2 top-[-12rem] -z-10 h-[36rem] w-[60rem] -translate-x-1/2 rounded-full bg-accent/20 blur-3xl"
+      />
+
+      <div className="mx-auto flex max-w-4xl flex-col items-center px-4 pb-14 pt-16 text-center sm:pt-24">
+        <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-surface/80 px-3 py-1 text-sm text-text-muted shadow-e1 backdrop-blur">
+          <Boxes className="size-3.5 text-accent" aria-hidden="true" />
+          1,193 official AWS, Google Cloud and Azure icons
         </p>
-        <h1 className="max-w-3xl text-display font-bold tracking-tight">
-          The whiteboard built for system design interviews
+        <h1 className="text-balance text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
+          The board built for <span className="text-accent">system design interviews</span>
         </h1>
-        <p className="mt-5 max-w-2xl text-md text-text-muted sm:text-lg sm:leading-8">
-          Drag in real AWS, Google Cloud and Azure components, wire them up, group them into regions
-          and VPCs, and size the system with a built-in capacity calculator. All in your browser.
+        <p className="mt-6 max-w-2xl text-balance text-md leading-7 text-text-muted sm:text-lg sm:leading-8">
+          Lay out real cloud components, connect and group them, write details on every card, and
+          size the system with a built-in capacity calculator.
         </p>
-        <div className="mt-8 flex flex-wrap items-center gap-3">
+        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
           <Button asChild variant="primary" size="lg">
             <Link to="/new">
-              Start a board <ArrowRight />
+              Start a board, free <ArrowRight />
             </Link>
           </Button>
-          <Button asChild variant="ghost" size="lg">
-            <a href="#how">How it works</a>
+          <Button asChild variant="secondary" size="lg">
+            <a href="#how">See how it works</a>
           </Button>
         </div>
-        <p className="mt-4 text-sm text-text-muted">
-          One board per person · deleted after {BOARD_LIFETIME_DAYS} days · saved in your browser
-        </p>
+        <ul className="mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-text-muted">
+          <li className="inline-flex items-center gap-1.5">
+            <UserRound className="size-4" aria-hidden="true" /> One board per person
+          </li>
+          <li className="inline-flex items-center gap-1.5">
+            <Clock className="size-4" aria-hidden="true" /> Deleted after {BOARD_LIFETIME_DAYS} days
+          </li>
+          <li className="inline-flex items-center gap-1.5">
+            <HardDrive className="size-4" aria-hidden="true" /> Saved to your account
+          </li>
+        </ul>
       </div>
-      <div className="mx-auto max-w-6xl px-4 pb-16">
-        <figure className="overflow-hidden rounded-xl border border-border bg-surface shadow-e3">
+
+      <div className="relative mx-auto max-w-6xl px-4 pb-20">
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-16 top-10 -z-10 h-2/3 rounded-full bg-accent/25 blur-3xl"
+        />
+        <figure className="overflow-hidden rounded-2xl border border-border-strong bg-surface shadow-e3 ring-1 ring-black/5">
+          <div className="flex h-9 items-center gap-2 border-b border-border bg-bg-subtle px-4">
+            <span className="size-2.5 rounded-full bg-[#ff5f57]" aria-hidden="true" />
+            <span className="size-2.5 rounded-full bg-[#febc2e]" aria-hidden="true" />
+            <span className="size-2.5 rounded-full bg-[#28c840]" aria-hidden="true" />
+            <span className="mx-auto rounded-md bg-surface px-3 py-0.5 text-xs text-text-muted">
+              archboard.ashutoshdev.online
+            </span>
+            <span className="w-12" aria-hidden="true" />
+          </div>
           <img
             src={resolved === 'dark' ? '/landing/board-dark.jpg' : '/landing/board-light.jpg'}
             alt="The ArchBoard editor showing a URL shortener design: clients, a load balancer, a URL service inside a VPC with a Redis cache and Postgres, an async analytics pipeline into BigQuery, and a capacity estimate note."
@@ -231,7 +263,7 @@ function HowItWorks() {
   const steps = [
     {
       title: 'Start a board',
-      body: 'One click. No account, no setup. Your board opens with a hint so you never face a blank canvas.',
+      body: 'One click. Sign in to save it to your account, or just try it in your browser. Your board opens with a hint so you never face a blank canvas.',
     },
     {
       title: 'Lay out the system',
@@ -317,64 +349,14 @@ function Rules() {
             Boards are deleted automatically {BOARD_LIFETIME_DAYS} days after they're created. The
             board shows how many days are left.
           </Rule>
-          <Rule icon={<HardDrive />} title="Saved in your browser">
-            Your board is stored on this device, not uploaded. Clearing your browser's site data
-            also deletes it, and it won't appear on other devices.
+          <Rule icon={<HardDrive />} title="Saved to your account">
+            Signed in, your board is saved on our server as you work, so it opens on any device. We
+            keep only your account id, never your email or name.
           </Rule>
-          <Rule icon={<ArrowRight />} title="No account needed">
-            Just start drawing. Sign-in will only be needed for sharing a board with someone else,
-            once that ships.
+          <Rule icon={<ArrowRight />} title="Try it without an account">
+            Not signed in? Your board is kept in this browser only. Sign in at any point and it
+            moves to your account automatically.
           </Rule>
-        </ul>
-      </div>
-    </section>
-  );
-}
-
-function Roadmap() {
-  const items = [
-    [
-      'Pass the pen',
-      'Live sessions where one person presents and everyone else watches, comments and points.',
-    ],
-    [
-      'Interview mode',
-      'A phased timer, a requirements checklist and roles for interviewer and candidate.',
-    ],
-    ['Session replay', 'Scrub through how a design evolved, with markers for each phase.'],
-    [
-      'Templates',
-      'Polished starting points for classic problems: chat, news feed, ride sharing and more.',
-    ],
-    ['Export', 'PNG and SVG images for blogs and resumes, plus JSON import and export.'],
-    [
-      'Generate with AI',
-      'Describe a system in a sentence and get an editable diagram to start from.',
-    ],
-  ];
-  return (
-    <section
-      id="roadmap"
-      aria-labelledby="roadmap-title"
-      className="scroll-mt-16 border-b border-border bg-bg-subtle"
-    >
-      <div className="mx-auto max-w-6xl px-4 py-20">
-        <SectionHeading
-          id="roadmap-title"
-          eyebrow="On the roadmap"
-          title="What's coming next"
-          intro="Not built yet. Listed so you know where this is going."
-        />
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map(([title, body]) => (
-            <li key={title} className="rounded-xl border border-dashed border-border-strong p-5">
-              <p className="mb-2 inline-block rounded-sm bg-bg px-1.5 py-0.5 text-xs font-semibold text-text-muted">
-                Coming soon
-              </p>
-              <h3 className="font-semibold">{title}</h3>
-              <p className="mt-1 text-base text-text-muted">{body}</p>
-            </li>
-          ))}
         </ul>
       </div>
     </section>
@@ -389,7 +371,9 @@ function FinalCta() {
           <h2 id="cta-title" className="text-2xl font-semibold tracking-tight">
             Your next design round starts here
           </h2>
-          <p className="mt-2 text-md text-text-muted">Free, in your browser, ready in one click.</p>
+          <p className="mt-2 text-md text-text-muted">
+            Free, ready in one click, saved to your account.
+          </p>
         </div>
         <Button asChild variant="primary" size="lg">
           <Link to="/new">
