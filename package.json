@@ -1,0 +1,38 @@
+{
+  "name": "archboard",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "turbo run dev --filter=@archboard/web",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "icons:import": "pnpm --filter @archboard/icons import",
+    "db:migrate": "pnpm --filter @archboard/db migrate:dev",
+    "db:seed": "pnpm --filter @archboard/db seed",
+    "dev:services": "docker compose -f infra/compose/compose.dev.yml up -d postgres redis"
+  },
+  "devDependencies": {
+    "@archboard/config": "workspace:*",
+    "@eslint/js": "9.39.5",
+    "@types/node": "22",
+    "eslint": "9.39.5",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.14.0",
+    "prettier": "3.10.1",
+    "tsx": "4.23.15",
+    "turbo": "2.11.13",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.73.0",
+    "vitest": "5.1.1"
+  }
+}

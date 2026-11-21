@@ -1,0 +1,79 @@
+# Local development stack: `docker compose -f infra/compose/compose.dev.yml up`
+# Postgres and Redis are published on localhost only. api and sync run with hot reload
+# (source is bind-mounted); the web app runs on the host with `pnpm dev` for the fastest HMR.
+name: archboard-dev
+
+x-node-service: &node-service
+  image: node:22-alpine
+  working_dir: /repo
+  volumes:
+    - ../..:/repo
+    - node_modules_linux:/repo/node_modules
+  environment: &node-env
+    NODE_ENV: development
+    LOG_LEVEL: debug
+    PUBLIC_ORIGIN: http://localhost:5173
+    DATABASE_URL: postgresql://archboard:archboard@postgres:5432/archboard
+    REDIS_URL: redis://redis:6379
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+  profiles: [apps]
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: archboard
+      POSTGRES_PASSWORD: archboard
+      POSTGRES_DB: archboard
+    ports: ['127.0.0.1:5432:5432']
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U archboard -d archboard']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    mem_limit: 384m
+
+  redis:
+    image: redis:7-alpine
+    command:
+      [
+        'redis-server',
+        '--appendonly',
+        'yes',
+        '--maxmemory',
+        '64mb',
+        '--maxmemory-policy',
+        'noeviction',
+      ]
+    ports: ['127.0.0.1:6379:6379']
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    mem_limit: 96m
+
+  api:
+    <<: *node-service
+    command: sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @archboard/api dev"
+    environment:
+      <<: *node-env
+      API_PORT: '3000'
+    ports: ['127.0.0.1:3000:3000']
+
+  sync:
+    <<: *node-service
+    command: sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @archboard/sync dev"
+    environment:
+      <<: *node-env
+      SYNC_PORT: '4000'
+    ports: ['127.0.0.1:4000:4000']
+
+volumes:
+  pgdata:
+  redisdata:
+  node_modules_linux:

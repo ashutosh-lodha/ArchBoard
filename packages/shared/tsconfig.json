@@ -1,0 +1,1 @@
+{ "extends": "@archboard/config/tsconfig.node.json", "include": ["src"] }

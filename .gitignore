@@ -1,0 +1,14 @@
+node_modules/
+dist/
+generated/
+.turbo/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+playwright-report/
+test-results/
+packages/icons/vendor/
+packages/icons/.cache/

@@ -1,0 +1,26 @@
+{
+  "name": "@archboard/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./errors": "./src/errors.ts",
+    "./ids": "./src/ids.ts",
+    "./env": "./src/env.ts",
+    "./logger": "./src/logger.ts",
+    "./storage": "./src/storage/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "nanoid": "6.0.2",
+    "pino": "10.4.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@archboard/config": "workspace:*"
+  }
+}

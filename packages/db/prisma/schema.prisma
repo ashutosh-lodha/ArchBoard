@@ -1,0 +1,267 @@
+// ArchBoard data model — see docs/DESIGN.md §5.
+// Migration policy: expand → deploy → contract. Never drop or rename a column in the same
+// release as the code that stops using it.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MemberRole {
+  OWNER
+  EDITOR // can request the pen
+  VIEWER
+}
+
+enum InviteRole {
+  EDITOR
+  VIEWER
+}
+
+enum EventType {
+  PEN_GRANTED
+  PEN_RELEASED
+  PEN_EXPIRED
+  PEN_TAKEN_BACK
+  PHASE_CHANGED
+  INTERVIEW_STARTED
+  INTERVIEW_ENDED
+  MEMBER_JOINED
+  BOARD_LOCKED
+  BOARD_UNLOCKED
+  AI_APPLIED
+  IMPORTED
+}
+
+enum UpdateKind {
+  UPDATE
+  CHECKPOINT
+}
+
+enum AiJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+model User {
+  id          String        @id @default(cuid())
+  clerkId     String        @unique
+  email       String?
+  name        String
+  avatarUrl   String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  /// Soft delete on the user.deleted webhook; PII is scrubbed at the same time.
+  deletedAt   DateTime?
+  boards      Board[]       @relation("BoardOwner")
+  memberships BoardMember[]
+  comments    Comment[]
+  aiJobs      AiJob[]
+}
+
+model Board {
+  id             String             @id @default(cuid())
+  ownerId        String
+  owner          User               @relation("BoardOwner", fields: [ownerId], references: [id])
+  title          String             @default("Untitled board") @db.VarChar(120)
+  /// Locked = no new joins and no pen requests.
+  locked         Boolean            @default(false)
+  thumbnailKey   String?
+  templateSlug   String?
+  /// Highest persisted update seq; incremented in the same transaction as the insert.
+  lastSeq        BigInt             @default(0)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  lastActivityAt DateTime           @default(now())
+  /// Soft delete: the UI offers Undo, and boards are purged after 30 days.
+  deletedAt      DateTime?
+  members        BoardMember[]
+  invites        Invite[]
+  guests         Guest[]
+  updates        BoardUpdate[]
+  snapshots      BoardSnapshot[]
+  events         BoardEvent[]
+  comments       Comment[]
+  interviews     InterviewSession[]
+  aiJobs         AiJob[]
+
+  @@index([ownerId, deletedAt, lastActivityAt(sort: Desc)])
+}
+
+model BoardMember {
+  boardId String
+  userId  String
+  role    MemberRole
+  addedAt DateTime   @default(now())
+  board   Board      @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([boardId, userId])
+  @@index([userId])
+}
+
+model Invite {
+  id          String     @id @default(cuid())
+  boardId     String
+  board       Board      @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  /// sha256 of the 128-bit random code in the share URL; the code itself is never stored.
+  codeHash    String     @unique
+  role        InviteRole
+  createdById String
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  useCount    Int        @default(0)
+  createdAt   DateTime   @default(now())
+  guests      Guest[]
+
+  @@index([boardId])
+}
+
+/// A participant without a Clerk account, scoped to one board via an invite.
+model Guest {
+  id          String   @id @default(cuid())
+  boardId     String
+  inviteId    String
+  displayName String   @db.VarChar(60)
+  createdAt   DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  board       Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  invite      Invite   @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+
+  @@index([boardId])
+  @@index([inviteId])
+}
+
+/// Append-only Yjs update log, used for replay and recovery.
+model BoardUpdate {
+  id        BigInt     @id @default(autoincrement())
+  boardId   String
+  seq       BigInt
+  kind      UpdateKind @default(UPDATE)
+  /// "u_<userId>" | "g_<guestId>" | "system" | "ai"
+  authorId  String?
+  data      Bytes
+  createdAt DateTime   @default(now())
+  board     Board      @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@unique([boardId, seq])
+  @@index([boardId, createdAt])
+}
+
+/// Compacted document state. Blobs over 256 KB live in object storage (gcsKey).
+model BoardSnapshot {
+  id        String   @id @default(cuid())
+  boardId   String
+  upToSeq   BigInt
+  sizeBytes Int
+  data      Bytes?
+  gcsKey    String?
+  createdAt DateTime @default(now())
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([boardId, upToSeq(sort: Desc)])
+}
+
+/// Replay markers and audit trail.
+model BoardEvent {
+  id        BigInt    @id @default(autoincrement())
+  boardId   String
+  type      EventType
+  actorId   String?
+  atSeq     BigInt
+  payload   Json      @default("{}")
+  createdAt DateTime  @default(now())
+  board     Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([boardId, createdAt])
+}
+
+model Comment {
+  id            String    @id @default(cuid())
+  boardId       String
+  /// Pinned component; null means a board-level comment.
+  nodeId        String?
+  /// Null for a thread root; replies are one level deep.
+  parentId      String?
+  authorUserId  String?
+  authorGuestId String?
+  body          String    @db.VarChar(2000)
+  resolvedAt    DateTime?
+  editedAt      DateTime?
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  board         Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  author        User?     @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  parent        Comment?  @relation("Thread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies       Comment[] @relation("Thread")
+
+  @@index([boardId, createdAt])
+  @@index([parentId])
+}
+
+/// Read markers for unread badges.
+model CommentRead {
+  boardId    String
+  /// "u_<userId>" | "g_<guestId>"
+  principal  String
+  lastReadAt DateTime
+
+  @@id([boardId, principal])
+}
+
+model InterviewSession {
+  id           String    @id @default(cuid())
+  boardId      String
+  problem      String    @default("")
+  /// [{id, kind: 'functional' | 'nonfunctional', text, done}]
+  requirements Json      @default("[]")
+  /// [{key, label, minutes}]
+  phases       Json
+  /// {phaseIndex, startedAt, elapsedMs}
+  timer        Json
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
+  board        Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([boardId, startedAt(sort: Desc)])
+}
+
+model Template {
+  slug         String   @id
+  title        String
+  summary      String
+  difficulty   String
+  tags         String[]
+  /// DiagramV1, validated by the seed script.
+  diagram      Json
+  thumbnailKey String?
+  sortOrder    Int      @default(0)
+}
+
+/// Phase 9 (AI agent). Created now so the data model stays stable.
+model AiJob {
+  id         String      @id @default(cuid())
+  boardId    String?
+  userId     String
+  prompt     String      @db.VarChar(4000)
+  options    Json
+  status     AiJobStatus @default(QUEUED)
+  attempts   Int         @default(0)
+  result     Json?
+  error      String?
+  tokensIn   Int         @default(0)
+  tokensOut  Int         @default(0)
+  createdAt  DateTime    @default(now())
+  finishedAt DateTime?
+  board      Board?      @relation(fields: [boardId], references: [id], onDelete: SetNull)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}

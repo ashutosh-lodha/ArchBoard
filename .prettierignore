@@ -1,0 +1,7 @@
+pnpm-lock.yaml
+dist
+generated
+coverage
+packages/icons/vendor
+packages/icons/src/generated
+docs
