@@ -7,8 +7,8 @@ Last checked: 2026-11-21. Re-check each provider's page whenever a pack is updat
 | Set | Source | Version | Committed to the repo? | Status |
 |---|---|---|---|---|
 | Generic (21 blocks) | Drawn for ArchBoard (`packages/icons/src/generic.ts`) | 1 | Yes, it's our own work | ✅ in use |
-| AWS Architecture Icons | <https://aws.amazon.com/architecture/icons/> | 2026-07-31 (Q3) | **No**, downloaded at build time | ⏳ awaiting first import |
-| Azure Public Service Icons | <https://learn.microsoft.com/en-us/azure/architecture/icons/> | V25 | **No**, downloaded at build time | ⏳ awaiting first import (terms must be accepted) |
+| AWS Architecture Icons | <https://aws.amazon.com/architecture/icons/> | 2026-07-31 (Q3) | **No**, downloaded at build time | ✅ imported 2026-11-21: 303 service icons (64 px), SHA-256 pinned |
+| Azure Public Service Icons | <https://learn.microsoft.com/en-us/azure/architecture/icons/> | V25 | **No**, downloaded at build time | ✅ imported 2026-11-21: 643 icons, SHA-256 pinned; terms accepted by the owner |
 | Google Cloud icons | <https://cloud.google.com/icons> | — | **No** | ⏳ download link not found yet (page renders client-side) |
 
 Raw vendor packs are never committed. `pnpm icons:import` downloads them from the URLs in `packages/icons/sources.json`, checks a pinned SHA-256, extracts only the SVGs into `packages/icons/vendor/` (gitignored), and builds optimised copies into `packages/icons/generated/` (gitignored). The built web app serves them as static files, which is how the icons appear in diagrams.
@@ -24,11 +24,16 @@ Raw vendor packs are never committed. `pnpm icons:import` downloads them from th
 - Microsoft permits use of the icons "in architectural diagrams, training materials, or documentation". You may copy, distribute and display them **only for that use**, and Microsoft reserves all other rights.
 - **Do:** use an icon to show how products work together, label it with the product name, and show it as it appears in Azure.
 - **Don't:** crop, flip, rotate, distort or otherwise change an icon's shape, or use a Microsoft product icon to represent your own product or service.
-- The download page requires ticking **"I agree to the above terms"**. Someone has to accept these terms before the first import, so **the owner accepts them, not the build bot**.
+- The download page requires ticking **"I agree to the above terms"**. Someone has to accept these terms before the first import, so **the owner accepts them, not the build bot**. The owner accepted them on 2026-11-21, before the first import.
 - How we comply: product labels are shown next to icons (the node label defaults to the product name); nodes never rotate or crop icons; ArchBoard's own branding never uses Azure icons.
 
 ### Google Cloud
 - Terms not captured yet: the icons page didn't return readable content to an automated fetch. **[TODO: read <https://cloud.google.com/icons> in a browser, record the pack URL and the usage terms here, then add the URL to sources.json.]**
+
+## What gets imported
+- **AWS:** only the 64 px service icons under `Architecture-Service-Icons_*`. The 32/48 px duplicates and the resource, category and group icons are skipped. (Group icons are a candidate for Region and VPC containers later.) Labels keep the vendor's own casing, e.g. "AWS IoT SiteWise".
+- **Azure:** every `*-icon-service-*` SVG. The "new icons" release folder is filed under "Other". Icons that appear in several category folders are imported once.
+- If a pack's bytes change upstream, re-importing fails the SHA-256 check on purpose. Review the new pack, then update `sources.json` and this file.
 
 ## Rules ArchBoard follows for every vendor icon
 1. Show it only as a component in an architecture diagram (palette, canvas, exports, templates, AI output).

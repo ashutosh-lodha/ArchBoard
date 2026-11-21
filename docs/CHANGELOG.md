@@ -23,3 +23,10 @@
 - Playwright + axe at 4 viewports in light and dark: 20 checks (0 serious/critical violations, no horizontal scroll, keyboard and focus paths).
 - GitHub Actions: lint/typecheck/unit/audit; migrations applied to a real Postgres, plus a drift check and a double seed; e2e.
 - ADR-001 (Yjs vs OT), ADR-003 (Postgres vs MongoDB), ADR-006 (React Flow vs custom canvas).
+
+### Phase 1 follow-up: vendor icons (2026-11-21)
+- Imported the official AWS (2026-07-31, 303 service icons) and Azure (V25, 643 icons) packs after the owner accepted both providers' terms. SHA-256 hashes are pinned in `packages/icons/sources.json`. Raw packs stay out of git.
+- Registry: 967 icons in total. Labels keep vendor casing ("Amazon CodeGuru", "AKS Automatic"). Fixed Azure's stray-space file name and the "new icons" pseudo-category.
+- Renamed the package script to `import-packs`, because `pnpm import` is a built-in pnpm command and silently shadowed it. `pnpm icons:import` works again.
+- New tests against the real registry: unique ids, every SVG present, and search finds S3, SQS, Lambda, DynamoDB, Azure Load Balancers, Kubernetes and VMs, with the generic blocks still ranked first. 42 icon tests in total.
+- The design-system gallery shows a sample of provider icons, for visual checks.

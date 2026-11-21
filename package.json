@@ -14,7 +14,7 @@
     "test": "turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "icons:import": "pnpm --filter @archboard/icons import",
+    "icons:import": "pnpm --filter @archboard/icons import-packs",
     "db:migrate": "pnpm --filter @archboard/db migrate:dev",
     "db:seed": "pnpm --filter @archboard/db seed",
     "dev:services": "docker compose -f infra/compose/compose.dev.yml up -d postgres redis",

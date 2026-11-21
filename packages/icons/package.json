@@ -10,10 +10,10 @@
   },
   "scripts": {
     "build": "tsx scripts/build-registry.ts",
-    "import": "tsx scripts/import-icons.ts",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "import-packs": "tsx scripts/import-icons.ts"
   },
   "dependencies": {
     "fuse.js": "7.5.0"

@@ -204,6 +204,18 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+/** A few vendor icons to eyeball SVG optimisation (needs `pnpm icons:import`). */
+const PROVIDER_SAMPLE = [
+  ['aws/elastic-load-balancing', 'Elastic Load Balancing', 'AWS'],
+  ['aws/amazon-simple-storage-service', 'Amazon S3', 'AWS'],
+  ['aws/aws-lambda', 'AWS Lambda', 'AWS'],
+  ['aws/amazon-dynamodb', 'Amazon DynamoDB', 'AWS'],
+  ['azure/load-balancers', 'Load Balancers', 'Azure'],
+  ['azure/kubernetes-services', 'Kubernetes Services', 'Azure'],
+  ['azure/virtual-machine', 'Virtual Machine', 'Azure'],
+  ['azure/storage-accounts', 'Storage Accounts', 'Azure'],
+] as const;
+
 const SWATCHES = [
   'bg',
   'bg-subtle',
@@ -563,6 +575,23 @@ function Showcase() {
             JSON in the DiagramV1 format.
           </TabsContent>
         </Tabs>
+      </Section>
+
+      <Section title="Provider icons (sample)">
+        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 2xl:grid-cols-4">
+          {PROVIDER_SAMPLE.map(([id, label, provider]) => (
+            <li
+              key={id}
+              className="flex items-center gap-2 rounded-lg border border-border-strong bg-surface p-2 shadow-e1"
+            >
+              <img src={`/icons/${id}.svg`} alt="" className="size-8 shrink-0" loading="lazy" />
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium">{label}</span>
+                <span className="block text-xs text-text-muted">{provider}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
       </Section>
 
       <Section title="Generic components">

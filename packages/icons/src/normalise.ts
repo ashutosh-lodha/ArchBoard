@@ -11,6 +11,9 @@ export interface NormalisedName {
   category: string;
 }
 
+const SPECIAL_CASE: Record<string, string> = { devops: 'DevOps', nosql: 'NoSQL', iot: 'IoT' };
+const SMALL_WORDS = new Set(['of', 'and', 'for', 'the', 'to', 'in', 'on', 'with']);
+
 const ACRONYMS = new Map(
   [
     'api',
@@ -60,7 +63,7 @@ const ACRONYMS = new Map(
     'ui',
     'bi',
     'etl',
-  ].map((a) => [a, a === 'devops' ? 'DevOps' : a === 'nosql' ? 'NoSQL' : a.toUpperCase()]),
+  ].map((a) => [a, SPECIAL_CASE[a] ?? a.toUpperCase()]),
 );
 
 export function slugify(text: string): string {
@@ -76,7 +79,25 @@ export function titleCase(slug: string): string {
   return slug
     .split('-')
     .filter(Boolean)
-    .map((w) => ACRONYMS.get(w) ?? w.charAt(0).toUpperCase() + w.slice(1))
+    .map((w, i) =>
+      i > 0 && SMALL_WORDS.has(w) ? w : (ACRONYMS.get(w) ?? w.charAt(0).toUpperCase() + w.slice(1)),
+    )
+    .join(' ');
+}
+
+/**
+ * Human label from a vendor file-name token, keeping the vendor's own casing ("CodeGuru",
+ * "IoT SiteWise", "AKS"). Only all-lower-case words are re-cased.
+ */
+export function labelFromToken(token: string): string {
+  return token
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((w, i) => {
+      if (w !== w.toLowerCase()) return w;
+      if (i > 0 && SMALL_WORDS.has(w)) return w;
+      return ACRONYMS.get(w) ?? w.charAt(0).toUpperCase() + w.slice(1);
+    })
     .join(' ');
 }
 
@@ -102,7 +123,7 @@ export function normaliseAws(path: string): NormalisedName | null {
   const slug = slugify(m[1]);
   return {
     slug,
-    label: titleCase(slug),
+    label: labelFromToken(m[1]),
     category: categoryDir ? titleCase(slugify(categoryDir.replace(/^Arch_/, ''))) : 'Other',
   };
 }
@@ -111,11 +132,14 @@ export function normaliseAws(path: string): NormalisedName | null {
 export function normaliseAzure(path: string): NormalisedName | null {
   const p = parts(path);
   const file = base(path);
-  const m = /^\d+-icon-service-(.+)$/.exec(file);
+  // Microsoft occasionally ships names like "030777508 -icon-service-…" (stray space).
+  const m = /^\d+\s*-icon-service-(.+)$/.exec(file);
   if (!m?.[1]) return null;
   const slug = slugify(m[1]);
-  const category = p.at(-2) ?? 'other';
-  return { slug, label: titleCase(slug), category: titleCase(slugify(category)) };
+  const folder = (p.at(-2) ?? 'other').toLowerCase();
+  // "new icons" is a release bucket, not a category.
+  const category = folder === 'new icons' ? 'other' : folder;
+  return { slug, label: labelFromToken(m[1]), category: titleCase(slugify(category)) };
 }
 
 /**

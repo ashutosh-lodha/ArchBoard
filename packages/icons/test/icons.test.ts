@@ -141,6 +141,32 @@ describe('vendor file normalisation', () => {
     expect(normaliseAzure('Icons/compute/readme.svg')).toBeNull();
   });
 
+  it('keeps vendor casing in labels (real file names from the 2026 packs)', () => {
+    const aws = (name: string) =>
+      normaliseAws(
+        `Architecture-Service-Icons_07312026/Arch_Internet-of-Things/64/Arch_${name}_64.svg`,
+      );
+    expect(aws('AWS-IoT-SiteWise')).toMatchObject({
+      label: 'AWS IoT SiteWise',
+      category: 'Internet of Things',
+    });
+    expect(aws('Amazon-CodeGuru')?.label).toBe('Amazon CodeGuru');
+    expect(aws('Elastic-Load-Balancing')?.label).toBe('Elastic Load Balancing');
+    expect(normaliseAzure('Icons/compute/10023-icon-service-AKS-Automatic.svg')?.label).toBe(
+      'AKS Automatic',
+    );
+  });
+
+  it('Azure: tolerates a stray space and files "new icons" under Other', () => {
+    expect(
+      normaliseAzure('Icons/new icons/030777508 -icon-service-Service-Group-Relationships.svg'),
+    ).toEqual({
+      slug: 'service-group-relationships',
+      label: 'Service Group Relationships',
+      category: 'Other',
+    });
+  });
+
   it('Google Cloud: strips size/colour suffixes', () => {
     expect(normaliseGcp('core-products/Cloud_Run/SVG/Cloud_Run-512-color.svg')).toMatchObject({
       slug: 'cloud-run',

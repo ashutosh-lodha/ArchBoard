@@ -21,4 +21,4 @@ Screenshots in this folder come from the Playwright suite (`pnpm test:e2e`) at 3
 ## Deferred (with reason)
 - **Visual-regression baselines (pixel diffs)**: Phase 8, once screens stop changing every phase. Screenshots are archived per phase for now.
 - **Clerk theme preview**: `clerkAppearance` is ready; it's checked in Phase 3 when Clerk is wired in.
-- **Vendor icon packs**: waiting on your approval to download them and accept the providers' terms (see `docs/ICONS.md`).
+- **Vendor icon packs**: AWS and Azure imported after approval; Google Cloud still needs a download link.
