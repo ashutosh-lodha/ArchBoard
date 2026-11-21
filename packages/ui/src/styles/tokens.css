@@ -1,0 +1,145 @@
+/*
+ * ArchBoard design tokens (docs/UX.md §10). Semantic names only; components never use raw hex.
+ * Light is the default. Dark applies with data-theme="dark" on <html>, or follows the system
+ * preference when no explicit theme is set.
+ */
+
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #ffffff;
+  --bg-subtle: #f6f7f9;
+  --canvas: #f7f8fa;
+  --canvas-dot: #d3d8e0;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-hover: #f1f3f6;
+  --border: #e3e6eb;
+  --border-strong: #c9ced6;
+  --text: #14171c;
+  --text-muted: #5b6370;
+  --text-faint: #646b77;
+  --accent: #2b59c3;
+  --accent-hover: #234aa6;
+  --accent-subtle: #e9effb;
+  --on-accent: #ffffff;
+  --pen: #9a4f00;
+  --pen-strong: #d97706;
+  --pen-subtle: #fef3e2;
+  --success: #177040;
+  --success-subtle: #e6f4ec;
+  --warning: #9a5c00;
+  --warning-subtle: #fdf1dc;
+  --danger: #c8312b;
+  --danger-hover: #a82822;
+  --danger-subtle: #fbe9e8;
+  --focus: #2b59c3;
+  --guide: #e0368a;
+  --overlay: rgb(16 24 40 / 0.4);
+
+  --shadow-e1: 0 1px 2px rgb(16 24 40 / 0.06), 0 0 0 1px rgb(16 24 40 / 0.02);
+  --shadow-e2: 0 4px 12px rgb(16 24 40 / 0.08), 0 1px 3px rgb(16 24 40 / 0.06);
+  --shadow-e3: 0 12px 32px rgb(16 24 40 / 0.14), 0 2px 6px rgb(16 24 40 / 0.06);
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  --dur-1: 100ms;
+  --dur-2: 160ms;
+  --dur-3: 240ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+/* Dark palette, shared by the explicit and the system-preference selectors. */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #0e1014;
+  --bg-subtle: #14171c;
+  --canvas: #0b0d11;
+  --canvas-dot: #262b34;
+  --surface: #181b21;
+  --surface-raised: #1f232a;
+  --surface-hover: #242830;
+  --border: #2a2f38;
+  --border-strong: #3a404b;
+  --text: #e8eaee;
+  --text-muted: #9aa2af;
+  --text-faint: #8f97a3;
+  --accent: #7ea2f2;
+  --accent-hover: #9ab6f5;
+  --accent-subtle: #1a2440;
+  --on-accent: #0e1014;
+  --pen: #f5a524;
+  --pen-strong: #f5a524;
+  --pen-subtle: #2e2210;
+  --success: #4cc38a;
+  --success-subtle: #12291d;
+  --warning: #e8a23b;
+  --warning-subtle: #2d2112;
+  --danger: #f2726b;
+  --danger-hover: #f58f89;
+  --danger-subtle: #321615;
+  --focus: #9ab6f5;
+  --guide: #f06aae;
+  --overlay: rgb(0 0 0 / 0.6);
+
+  --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(255 255 255 / 0.03);
+  --shadow-e2: 0 4px 12px rgb(0 0 0 / 0.45), 0 0 0 1px rgb(255 255 255 / 0.04);
+  --shadow-e3: 0 12px 32px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='dark']) {
+    color-scheme: dark;
+
+    --bg: #0e1014;
+    --bg-subtle: #14171c;
+    --canvas: #0b0d11;
+    --canvas-dot: #262b34;
+    --surface: #181b21;
+    --surface-raised: #1f232a;
+    --surface-hover: #242830;
+    --border: #2a2f38;
+    --border-strong: #3a404b;
+    --text: #e8eaee;
+    --text-muted: #9aa2af;
+    --text-faint: #8f97a3;
+    --accent: #7ea2f2;
+    --accent-hover: #9ab6f5;
+    --accent-subtle: #1a2440;
+    --on-accent: #0e1014;
+    --pen: #f5a524;
+    --pen-strong: #f5a524;
+    --pen-subtle: #2e2210;
+    --success: #4cc38a;
+    --success-subtle: #12291d;
+    --warning: #e8a23b;
+    --warning-subtle: #2d2112;
+    --danger: #f2726b;
+    --danger-hover: #f58f89;
+    --danger-subtle: #321615;
+    --focus: #9ab6f5;
+    --guide: #f06aae;
+    --overlay: rgb(0 0 0 / 0.6);
+
+    --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(255 255 255 / 0.03);
+    --shadow-e2: 0 4px 12px rgb(0 0 0 / 0.45), 0 0 0 1px rgb(255 255 255 / 0.04);
+    --shadow-e3: 0 12px 32px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-1: 0ms;
+    --dur-2: 0ms;
+    --dur-3: 0ms;
+  }
+}

@@ -1,0 +1,15 @@
+**/node_modules
+.pnpm-store
+.git
+**/dist
+**/generated
+**/.turbo
+**/coverage
+e2e/test-results
+e2e/playwright-report
+docs
+packages/icons/vendor
+.env
+.env.*
+!.env.example
+.claude

@@ -31,26 +31,26 @@ See [DESIGN.md](DESIGN.md) and [UX.md](UX.md).
 ## Phase 1: Foundations (monorepo, schemas, icons, design system)
 **Goal:** everything later phases stand on, including a design system you can look at.
 
-- [ ] `git init`, pnpm workspace, Turborepo pipelines (`build`, `dev`, `lint`, `typecheck`, `test`), Node 22 pinned via `.nvmrc` + `packageManager`
-- [ ] `packages/config`: tsconfig bases (strict), ESLint flat config (typescript-eslint, react, jsx-a11y, import), Prettier
-- [ ] `packages/shared`: Zod env loader, pino logger, `AppError` hierarchy, id helpers, `StorageProvider` interface (local-disk + GCS impls)
-- [ ] `packages/diagram-schema`: DiagramV1 Zod schema + cross-field refinements, Y.Doc converters, diagram ops (`addNode`, `connect`, `group`, `findFreeSpot`, `autoName`, `duplicate`, `align`…), property tests (fast-check) for round-trips
-- [ ] `packages/protocol`: control-message schemas + close codes + error codes
-- [ ] `packages/db`: Prisma schema from DESIGN §5, initial migration, seed script (sample user, 2 boards)
-- [ ] `packages/icons`: `scripts/import-icons.ts` (downloads official AWS / GCP / Azure packs from documented URLs, checks SHA-256, normalises to `{id, provider, category, label, aliases, svgPath}`, optimises with SVGO, builds sprite sheets per provider + search index); hand-made generic block set (21 icons) in our visual style; alias table (`lb/elb/alb → load balancer` …)
-- [ ] `docs/ICONS.md`: each provider's licence and usage terms, source URLs, version, and what we redistribute
-- [ ] `packages/ui`: tokens (CSS variables, light + dark), Tailwind preset, shadcn/Radix components from UX §10.6, Clerk appearance theme, `/dev/ui` gallery route
-- [ ] `infra/compose/compose.dev.yml`: postgres, redis, api and sync with hot reload (tsx watch); `pnpm dev` runs Vite
-- [ ] `apps/api` / `apps/sync` / `apps/web` skeletons: health endpoints, logger, env validation, one test each
-- [ ] GitHub Actions CI skeleton: install (cached), lint, typecheck, unit tests, build; Testcontainers job stub
-- [ ] Draft ADR-001 (Yjs vs OT), ADR-003 (Postgres vs Mongo), ADR-006 (React Flow vs custom canvas)
+- [x] `git init`, pnpm workspace, Turborepo pipelines (`build`, `dev`, `lint`, `typecheck`, `test`), Node 22 pinned via `.nvmrc` + `packageManager`
+- [x] `packages/config`: tsconfig bases (strict), ESLint flat config (typescript-eslint, react, jsx-a11y, import), Prettier
+- [x] `packages/shared`: Zod env loader, pino logger, `AppError` hierarchy, id helpers, `StorageProvider` interface (local-disk + GCS impls)
+- [x] `packages/diagram-schema`: DiagramV1 Zod schema + cross-field refinements, Y.Doc converters, diagram ops (`addNode`, `connect`, `group`, `findFreeSpot`, `autoName`, `duplicate`, `align`…), property tests (fast-check) for round-trips
+- [x] `packages/protocol`: control-message schemas + close codes + error codes
+- [x] `packages/db`: Prisma schema from DESIGN §5, initial migration, seed script (sample user, 2 boards)
+- [x] `packages/icons`: `scripts/import-icons.ts` (downloads official AWS / GCP / Azure packs from documented URLs, checks SHA-256, normalises to `{id, provider, category, label, aliases, svgPath}`, optimises with SVGO, builds sprite sheets per provider + search index); hand-made generic block set (21 icons) in our visual style; alias table (`lb/elb/alb → load balancer` …) — script, normalisers, search and 21 generic icons done; first vendor import waits on your approval
+- [x] `docs/ICONS.md`: each provider's licence and usage terms, source URLs, version, and what we redistribute — AWS + Azure recorded; Google Cloud terms still TODO
+- [x] `packages/ui`: tokens (CSS variables, light + dark), Tailwind preset, shadcn/Radix components from UX §10.6, Clerk appearance theme, `/dev/ui` gallery route
+- [x] `infra/compose/compose.dev.yml`: postgres, redis, api and sync with hot reload (tsx watch); `pnpm dev` runs Vite
+- [x] `apps/api` / `apps/sync` / `apps/web` skeletons: health endpoints, logger, env validation, one test each
+- [x] GitHub Actions CI skeleton: install (cached), lint, typecheck, unit tests, build; real-Postgres migration + drift + seed job (Testcontainers suites start in Phase 3)
+- [x] Draft ADR-001 (Yjs vs OT), ADR-003 (Postgres vs Mongo), ADR-006 (React Flow vs custom canvas)
 
 **Acceptance**
-- [ ] `docker compose -f infra/compose/compose.dev.yml up` + `pnpm dev` from a fresh clone works by following the README alone
-- [ ] `/dev/ui` shows every component in both themes, with axe reporting 0 violations
-- [ ] Icon registry: ≥ 95% of the provider icons imported, every generic block has ≥ 3 aliases, search for `lb`/`elb`/`load balancer` returns the same top result (unit test)
-- [ ] DiagramV1 round-trip property test runs 1,000 cases green; invalid fixtures produce path-specific error messages
-- [ ] `prisma migrate dev` from empty → seeded works; CI green
+- [x] `docker compose -f infra/compose/compose.dev.yml up` + `pnpm dev` from a fresh clone works by following the README alone — verified: dev image + src mounts, healthy against Postgres/Redis, hot reload works on Windows
+- [x] `/dev/ui` shows every component in both themes, with axe reporting 0 violations
+- [ ] Icon registry: ≥ 95% of the provider icons imported, every generic block has ≥ 3 aliases, search for `lb`/`elb`/`load balancer` returns the same top result (unit test) — generic part done; vendor import pending approval
+- [x] DiagramV1 round-trip property test runs 1,000 cases green; invalid fixtures produce path-specific error messages
+- [ ] `prisma migrate dev` from empty → seeded works; CI green — local verified; CI runs on first push
 
 ---
 

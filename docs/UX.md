@@ -346,14 +346,15 @@ A full-width read-only canvas plus a bottom transport bar: ⏮ ▶ ⏭, speed, a
 | `--border-strong` | `#C9CED6` | `#3A404B` | inputs, node borders |
 | `--text` | `#14171C` | `#E8EAEE` | primary text |
 | `--text-muted` | `#5B6370` | `#9AA2AF` | secondary (4.6:1 / 6.1:1) |
-| `--text-faint` | `#8A919C` | `#6B7380` | placeholders (non-essential only) |
+| `--text-faint` | `#646B77` | `#8F97A3` | shortcut hints, placeholders (≥ 4.5:1 on surfaces) |
 | `--accent` | `#2B59C3` | `#7EA2F2` | primary actions, selection |
 | `--accent-hover` | `#234AA6` | `#9AB6F5` | |
 | `--accent-subtle` | `#E9EFFB` | `#1A2440` | selected backgrounds |
 | `--on-accent` | `#FFFFFF` | `#0E1014` | text on accent |
-| `--pen` | `#D97706` | `#F5A524` | pen holder chip and badge, presenter ring |
+| `--pen` | `#9A4F00` | `#F5A524` | pen text (chip, badges) |
+| `--pen-strong` | `#D97706` | `#F5A524` | pen badge fill, presenter ring |
 | `--pen-subtle` | `#FEF3E2` | `#2E2210` | |
-| `--success` | `#1F8A4C` | `#4CC38A` | saved |
+| `--success` | `#177040` | `#4CC38A` | saved |
 | `--warning` | `#B26B00` | `#E8A23B` | offline |
 | `--danger` | `#C8312B` | `#F2726B` | errors, destructive |
 | `--focus` | `#2B59C3` | `#9AB6F5` | focus ring |

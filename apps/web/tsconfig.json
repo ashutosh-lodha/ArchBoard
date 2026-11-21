@@ -1,0 +1,5 @@
+{
+  "extends": "@archboard/config/tsconfig.react.json",
+  "include": ["src", "vite.config.ts"],
+  "compilerOptions": { "types": ["vite/client", "node"] }
+}

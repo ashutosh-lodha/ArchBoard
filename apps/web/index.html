@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>ArchBoard: whiteboard system design, one pen at a time</title>
+    <meta
+      name="description"
+      content="A real-time whiteboard for system design interviews. Draw architectures with AWS, Google Cloud and Azure icons, pass the pen, run the interview timer and replay how the design evolved."
+    />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0e1014" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Apply the saved theme before first paint (no flash). Keep in sync with THEME_BOOTSTRAP_SCRIPT. -->
+    <script>
+      (function () {
+        try {
+          var p = localStorage.getItem('archboard.theme');
+          var d =
+            p === 'dark' ||
+            ((!p || p === 'system') && matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.dataset.theme = d ? 'dark' : 'light';
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>ArchBoard needs JavaScript to run.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

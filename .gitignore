@@ -12,3 +12,4 @@ playwright-report/
 test-results/
 packages/icons/vendor/
 packages/icons/.cache/
+.pnpm-store/

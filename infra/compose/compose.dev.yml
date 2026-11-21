@@ -1,20 +1,31 @@
 # Local development stack: `docker compose -f infra/compose/compose.dev.yml up`
-# Postgres and Redis are published on localhost only. api and sync run with hot reload
-# (source is bind-mounted); the web app runs on the host with `pnpm dev` for the fastest HMR.
+# Postgres and Redis are published on localhost only. With `--profile apps`, api and sync also
+# run with hot reload: their dependencies live inside the dev image (Dockerfile.dev) and only the
+# src/ folders are bind-mounted, so containers never modify the host node_modules.
+# The web app runs on the host with `pnpm dev` for the fastest HMR.
 name: archboard-dev
 
 x-node-service: &node-service
-  image: node:22-alpine
+  build:
+    context: ../..
+    dockerfile: infra/compose/Dockerfile.dev
+  image: archboard-dev-node
   working_dir: /repo
   volumes:
-    - ../..:/repo
-    - node_modules_linux:/repo/node_modules
+    - ../../apps/api/src:/repo/apps/api/src:ro
+    - ../../apps/sync/src:/repo/apps/sync/src:ro
+    - ../../packages/shared/src:/repo/packages/shared/src:ro
+    - ../../packages/diagram-schema/src:/repo/packages/diagram-schema/src:ro
+    - ../../packages/protocol/src:/repo/packages/protocol/src:ro
+    - ../../packages/db/src:/repo/packages/db/src:ro
   environment: &node-env
     NODE_ENV: development
     LOG_LEVEL: debug
-    PUBLIC_ORIGIN: http://localhost:5173
+    PUBLIC_ORIGIN: http://localhost:5180
     DATABASE_URL: postgresql://archboard:archboard@postgres:5432/archboard
     REDIS_URL: redis://redis:6379
+    # Docker Desktop on Windows/macOS does not forward file events into containers: poll instead.
+    CHOKIDAR_USEPOLLING: 'true'
   depends_on:
     postgres: { condition: service_healthy }
     redis: { condition: service_healthy }
@@ -59,7 +70,7 @@ services:
 
   api:
     <<: *node-service
-    command: sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @archboard/api dev"
+    command: ['pnpm', '--filter', '@archboard/api', 'dev']
     environment:
       <<: *node-env
       API_PORT: '3000'
@@ -67,7 +78,7 @@ services:
 
   sync:
     <<: *node-service
-    command: sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @archboard/sync dev"
+    command: ['pnpm', '--filter', '@archboard/sync', 'dev']
     environment:
       <<: *node-env
       SYNC_PORT: '4000'
@@ -76,4 +87,3 @@ services:
 volumes:
   pgdata:
   redisdata:
-  node_modules_linux:

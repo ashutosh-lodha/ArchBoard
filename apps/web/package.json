@@ -1,0 +1,32 @@
+{
+  "name": "@archboard/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json && vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@archboard/diagram-schema": "workspace:*",
+    "@archboard/icons": "workspace:*",
+    "@archboard/ui": "workspace:*",
+    "lucide-react": "1.77.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-router": "8.5.2"
+  },
+  "devDependencies": {
+    "@archboard/config": "workspace:*",
+    "@tailwindcss/vite": "4.3.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.3.0",
+    "tailwindcss": "4.3.5",
+    "vite": "8.3.8"
+  }
+}

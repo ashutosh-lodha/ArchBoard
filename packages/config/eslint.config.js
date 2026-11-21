@@ -37,6 +37,15 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       ...jsxA11y.configs.recommended.rules,
+      // Our Radix-based Switch/Checkbox render buttons that a wrapping <label> does label.
+      'jsx-a11y/label-has-associated-control': [
+        'error',
+        {
+          controlComponents: ['Switch', 'Checkbox', 'Input', 'Textarea'],
+          assert: 'either',
+          depth: 3,
+        },
+      ],
     },
   },
   {

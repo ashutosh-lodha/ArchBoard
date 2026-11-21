@@ -1,0 +1,26 @@
+{
+  "name": "@archboard/icons",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./registry.json": "./generated/registry.json",
+    "./svg/*": "./generated/svg/*"
+  },
+  "scripts": {
+    "build": "tsx scripts/build-registry.ts",
+    "import": "tsx scripts/import-icons.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "fuse.js": "7.5.0"
+  },
+  "devDependencies": {
+    "@archboard/config": "workspace:*",
+    "fflate": "0.8.3",
+    "svgo": "4.1.0"
+  }
+}

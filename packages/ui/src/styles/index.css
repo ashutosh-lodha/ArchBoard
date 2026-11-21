@@ -1,0 +1,150 @@
+/*
+ * Entry stylesheet for apps: tokens + Tailwind v4 theme mapping + base styles.
+ * Apps import this once: `@import '@archboard/ui/styles.css';`
+ */
+@import 'tailwindcss';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
+@import './tokens.css';
+
+/* Scan the design-system sources for class names (apps add their own @source). */
+@source '../';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-subtle: var(--bg-subtle);
+  --color-canvas: var(--canvas);
+  --color-canvas-dot: var(--canvas-dot);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-on-accent: var(--on-accent);
+  --color-pen: var(--pen);
+  --color-pen-strong: var(--pen-strong);
+  --color-pen-subtle: var(--pen-subtle);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-focus: var(--focus);
+  --color-guide: var(--guide);
+  --color-overlay: var(--overlay);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  --shadow-e1: var(--shadow-e1);
+  --shadow-e2: var(--shadow-e2);
+  --shadow-e3: var(--shadow-e3);
+
+  /* Type scale (UX §10.2): size / line-height. */
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 13px;
+  --text-sm--line-height: 18px;
+  --text-base: 14px;
+  --text-base--line-height: 20px;
+  --text-md: 16px;
+  --text-md--line-height: 24px;
+  --text-lg: 20px;
+  --text-lg--line-height: 28px;
+  --text-xl: 24px;
+  --text-xl--line-height: 32px;
+  --text-2xl: 32px;
+  --text-2xl--line-height: 40px;
+  --text-display: clamp(34px, 5vw, 48px);
+  --text-display--line-height: 1.08;
+
+  --ease-out: var(--ease-out);
+  --ease-in-out: var(--ease-in-out);
+
+  --animate-fade-in: fade-in var(--dur-2) var(--ease-out);
+  --animate-pop-in: pop-in var(--dur-2) var(--ease-out);
+  --animate-slide-in-right: slide-in-right var(--dur-3) var(--ease-out);
+  --animate-slide-in-left: slide-in-left var(--dur-3) var(--ease-out);
+  --animate-slide-in-bottom: slide-in-bottom var(--dur-3) var(--ease-out);
+  --animate-shimmer: shimmer 1.4s linear infinite;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@keyframes slide-in-bottom {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--bg);
+    overflow-x: hidden;
+  }
+  /* Visible focus everywhere (UX §9): never removed, only styled. */
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--accent-subtle);
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
