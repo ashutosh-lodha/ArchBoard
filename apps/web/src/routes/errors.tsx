@@ -6,6 +6,7 @@ export function NotFoundPage() {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-bg-subtle px-4">
       <EmptyState
+        headingLevel={1}
         icon={<Compass />}
         title="Page not found"
         description="The link may be wrong, or the page may have moved."
@@ -25,6 +26,7 @@ export function RouteError() {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-bg-subtle px-4">
       <EmptyState
+        headingLevel={1}
         icon={<TriangleAlert />}
         title="Something went wrong"
         description="This page hit an unexpected problem. Reloading usually fixes it."

@@ -179,9 +179,19 @@ export interface EmptyStateProps {
   description?: ReactNode;
   action?: ReactNode;
   className?: string;
+  /** Use 1 when the empty state is the whole page (404, error), so the page has an h1. */
+  headingLevel?: 1 | 2 | 3;
 }
 
-export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
+export function EmptyState({
+  icon,
+  title,
+  description,
+  action,
+  className,
+  headingLevel = 3,
+}: EmptyStateProps) {
+  const Heading = `h${headingLevel}` as const;
   return (
     <div
       className={cn(
@@ -195,7 +205,7 @@ export function EmptyState({ icon, title, description, action, className }: Empt
         </div>
       ) : null}
       <div className="space-y-1">
-        <h3 className="text-md font-semibold text-text">{title}</h3>
+        <Heading className="text-md font-semibold text-text">{title}</Heading>
         {description ? <p className="text-base text-text-muted">{description}</p> : null}
       </div>
       {action ? <div className="pt-1">{action}</div> : null}

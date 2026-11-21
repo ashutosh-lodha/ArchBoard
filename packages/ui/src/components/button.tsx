@@ -56,8 +56,15 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {...(asChild ? {} : { type: props.type ?? 'button' })}
       {...props}
     >
-      {loading ? <Spinner /> : null}
-      {children}
+      {/* Slot needs exactly one child, so asChild buttons render the child as-is. */}
+      {asChild ? (
+        children
+      ) : (
+        <>
+          {loading ? <Spinner /> : null}
+          {children}
+        </>
+      )}
     </Comp>
   );
 });
