@@ -371,6 +371,14 @@ function SiteFooter() {
         >
           <Code2 className="size-4" aria-hidden="true" /> Source on GitHub
         </a>
+        <div className="flex gap-4">
+          <Link to="/privacy" className="rounded-md hover:text-text">
+            Privacy
+          </Link>
+          <Link to="/terms" className="rounded-md hover:text-text">
+            Terms
+          </Link>
+        </div>
         <p>AWS, Google Cloud and Azure icons are trademarks of their respective owners.</p>
       </div>
     </footer>

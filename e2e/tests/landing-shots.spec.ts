@@ -13,6 +13,16 @@ const out = join(here, '../../apps/web/public/landing');
 
 test.skip(!process.env.SHOTS, 'set SHOTS=1 to regenerate landing screenshots');
 
+/** Tests run without Clerk; show the save status a signed-in person sees in production. */
+async function showAccountSaveStatus(page: import('@playwright/test').Page) {
+  await page.evaluate(() => {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      if (n.nodeValue === 'Saved on this device') n.nodeValue = 'Saved to your account';
+    }
+  });
+}
+
 for (const theme of ['light', 'dark'] as const) {
   test(`board screenshot (${theme})`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 860 });
@@ -32,6 +42,7 @@ for (const theme of ['light', 'dark'] as const) {
     await page.locator('.react-flow__node').filter({ hasText: 'URL service' }).click();
     await page.mouse.move(5, 5);
     await page.waitForTimeout(600);
+    await showAccountSaveStatus(page);
     await page.screenshot({ path: join(out, `board-${theme}.jpg`), type: 'jpeg', quality: 82 });
   });
 }
@@ -51,5 +62,6 @@ test('social preview image (1200×630)', async ({ page }) => {
   await page.getByRole('button', { name: 'Zoom to fit' }).click();
   await page.mouse.move(5, 5);
   await page.waitForTimeout(600);
+  await showAccountSaveStatus(page);
   await page.screenshot({ path: join(out, 'og.jpg'), type: 'jpeg', quality: 85 });
 });

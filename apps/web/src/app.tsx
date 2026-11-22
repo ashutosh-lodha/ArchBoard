@@ -7,6 +7,7 @@ import { HomePage } from './routes/home.tsx';
 import { NotFoundPage, RouteError } from './routes/errors.tsx';
 import { NewBoardPage } from './routes/new-board.tsx';
 import { SignInPage, SignUpPage } from './routes/auth-pages.tsx';
+import { PrivacyPage, TermsPage } from './routes/legal.tsx';
 
 const GalleryPage = lazy(() => import('./routes/gallery.tsx'));
 // The editor (React Flow, Yjs) is its own chunk so the home page stays light.
@@ -17,6 +18,8 @@ const pages: RouteObject[] = [
   // Clerk moves between sign-in steps under these paths (/sign-in/factor-one and so on).
   { path: '/sign-in/*', element: <SignInPage />, errorElement: <RouteError /> },
   { path: '/sign-up/*', element: <SignUpPage />, errorElement: <RouteError /> },
+  { path: '/privacy', element: <PrivacyPage />, errorElement: <RouteError /> },
+  { path: '/terms', element: <TermsPage />, errorElement: <RouteError /> },
   { path: '/new', element: <NewBoardPage />, errorElement: <RouteError /> },
   {
     path: '/b/:boardId',
