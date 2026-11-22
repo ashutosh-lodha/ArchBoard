@@ -3,6 +3,20 @@
 @source './';
 
 /*
+ * Only text fields show a typing caret. Without this, Chrome's caret browsing (F7) draws a
+ * blinking cursor on plain page text wherever you click, which makes the page feel like a document.
+ */
+body {
+  caret-color: transparent;
+}
+input,
+textarea,
+select,
+[contenteditable]:not([contenteditable='false']) {
+  caret-color: auto;
+}
+
+/*
  * React Flow theming with our tokens. Edges are calm graphite lines; async edges are dashed
  *; connection handles appear on hover/selection and get a 44px hit area on touch.
  */
