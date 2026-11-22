@@ -157,7 +157,7 @@ SCRIPT
 chmod 755 /usr/local/bin/archboard-stack
 
 # Nightly database backup (03:15 UTC), 7 kept on the VM; the disk itself is also snapshotted
-# daily by a Terraform-managed snapshot schedule.
+# daily by the archboard-daily-snapshots schedule.
 cat > /usr/local/bin/archboard-backup <<'SCRIPT'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -175,7 +175,7 @@ deploy ALL=(root) NOPASSWD: /usr/local/bin/archboard-apply-nginx, /usr/local/bin
 SUDO
 chmod 440 /etc/sudoers.d/archboard-deploy
 
-# First boot: the nginx config comes from instance metadata (set by Terraform from infra/nginx);
+# First boot: the nginx config comes from instance metadata (copies of infra/nginx);
 # later deploys upload newer versions. Then apply it (and get the certificate once DNS is live).
 install -d -m 755 -o deploy -g deploy /home/deploy/nginx
 md() { curl -fsS -H 'Metadata-Flavor: Google' "http://metadata.google.internal/computeMetadata/v1/instance/attributes/$1"; }

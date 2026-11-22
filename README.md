@@ -130,28 +130,26 @@ flowchart LR
 
 ## What each technology is used for
 
-| Layer                      | Technology                    | What it does here                                                                                                             |
-| -------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **Web app**                | React 19, TypeScript, Vite    | The editor and landing page. Vite builds them into static files                                                               |
-|                            | React Flow 12                 | The canvas: panning, zooming, nodes, connections, selection                                                                   |
-|                            | Yjs                           | The board's data model. Every change is a small "update", and updates from different tabs merge without conflicts             |
-|                            | IndexedDB (y-indexeddb)       | Keeps a copy of the board in the browser, so edits are never lost while offline                                               |
-|                            | Tailwind CSS v4, Radix UI     | Design system: light/dark tokens, accessible menus, dialogs and tooltips                                                      |
-|                            | Clerk React SDK               | Sign-in and sign-up pages on our own domain (`/sign-in`, `/sign-up`), user menu, and short-lived session tokens for API calls |
-| **API**                    | Node.js 22, Express 5         | Board endpoints: create, load, save, delete                                                                                   |
-|                            | @clerk/backend                | Verifies each request's session token with Clerk's public key, with no network call                                           |
-|                            | Zod, Pino                     | Configuration checked at start-up; structured JSON logs with request ids                                                      |
-| **Data**                   | PostgreSQL 16, Prisma 7       | One row per board: the owner's Clerk id, the board content (Yjs state) and its expiry date                                    |
-| **Edge**                   | nginx                         | HTTPS, HTTP/2, security headers, caching of static files, and the `/api` reverse proxy                                        |
-|                            | certbot (Let's Encrypt)       | Free TLS certificates, renewed automatically                                                                                  |
-| **Hosting**                | Google Compute Engine         | One e2-small VM in Mumbai with a static IP                                                                                    |
-|                            | Docker Compose                | Runs the API and PostgreSQL as containers, with health checks and restart policies                                            |
-|                            | Hostinger DNS                 | Points `archboard.ashutoshdev.online` at the VM and `clerk.archboard…` at Clerk                                               |
-| **Infrastructure as code** | Terraform                     | Creates the VM, static IP, firewall rules, snapshot schedule and CI identity                                                  |
-| **CI/CD**                  | GitHub Actions                | Tests every change, applies Terraform, builds and deploys                                                                     |
-|                            | Workload Identity Federation  | Lets GitHub Actions use Google Cloud with short-lived tokens, with no stored key                                              |
-| **Testing**                | Vitest, fast-check, Supertest | Unit, property-based and API tests                                                                                            |
-|                            | Playwright, axe-core          | End-to-end tests at 4 screen sizes, plus accessibility checks                                                                 |
+| Layer       | Technology                    | What it does here                                                                                                             |
+| ----------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Web app** | React 19, TypeScript, Vite    | The editor and landing page. Vite builds them into static files                                                               |
+|             | React Flow 12                 | The canvas: panning, zooming, nodes, connections, selection                                                                   |
+|             | Yjs                           | The board's data model. Every change is a small "update", and updates from different tabs merge without conflicts             |
+|             | IndexedDB (y-indexeddb)       | Keeps a copy of the board in the browser, so edits are never lost while offline                                               |
+|             | Tailwind CSS v4, Radix UI     | Design system: light/dark tokens, accessible menus, dialogs and tooltips                                                      |
+|             | Clerk React SDK               | Sign-in and sign-up pages on our own domain (`/sign-in`, `/sign-up`), user menu, and short-lived session tokens for API calls |
+| **API**     | Node.js 22, Express 5         | Board endpoints: create, load, save, delete                                                                                   |
+|             | @clerk/backend                | Verifies each request's session token with Clerk's public key, with no network call                                           |
+|             | Zod, Pino                     | Configuration checked at start-up; structured JSON logs with request ids                                                      |
+| **Data**    | PostgreSQL 16, Prisma 7       | One row per board: the owner's Clerk id, the board content (Yjs state) and its expiry date                                    |
+| **Edge**    | nginx                         | HTTPS, HTTP/2, security headers, caching of static files, and the `/api` reverse proxy                                        |
+|             | certbot (Let's Encrypt)       | Free TLS certificates, renewed automatically                                                                                  |
+| **Hosting** | Google Compute Engine         | One e2-small VM in Mumbai with a static IP                                                                                    |
+|             | Docker Compose                | Runs the API and PostgreSQL as containers, with health checks and restart policies                                            |
+|             | Hostinger DNS                 | Points `archboard.ashutoshdev.online` at the VM and `clerk.archboard…` at Clerk                                               |
+| **CI/CD**   | GitHub Actions                | Tests every change, then builds and deploys over SSH                                                                          |
+| **Testing** | Vitest, fast-check, Supertest | Unit, property-based and API tests                                                                                            |
+|             | Playwright, axe-core          | End-to-end tests at 4 screen sizes, plus accessibility checks                                                                 |
 
 ---
 
@@ -228,18 +226,12 @@ The vendor icon packs are downloaded from the official AWS, Azure and Google pag
 
 ## Hosting and infrastructure
 
-Everything lives in its own Google Cloud project (**archboard**) and is defined in Terraform ([infra/terraform](infra/terraform/README.md)).
+Everything lives in its own Google Cloud project (**archboard**). The resources below are managed by hand with the Google Cloud console or `gcloud`. Deploys only use SSH and have no access to the Google Cloud API.
 
 ```mermaid
 flowchart TB
-  subgraph tf["Terraform"]
-    boot["bootstrap layer · applied once by the owner<br/>APIs · service accounts · GitHub identity federation"]
-    main["main layer · applied by GitHub Actions<br/>static IP · firewall · VM · snapshot schedule"]
-  end
-  state[("Terraform state<br/>private, versioned bucket")]
-  boot --> state
-  main --> state
-
+  ip["Static IP<br/>archboard-ip"] --> vm
+  fw["Firewall<br/>80 · 443 · 22"] --> vm
   subgraph vm["archboard-vm, set up by infra/vm/startup.sh"]
     direction LR
     n["nginx + certbot"]
@@ -247,18 +239,32 @@ flowchart TB
     u["deploy user<br/>(SSH key only)"]
     b["nightly database backup<br/>(kept 7 days)"]
   end
-  main --> vm
+  vm -.-> snap[("Daily disk snapshots<br/>kept 7 days")]
 ```
 
-| Resource                 | Details                                                                                     | Why                                                     |
-| ------------------------ | ------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| VM `archboard-vm`        | e2-small (2 vCPU burst, 2 GB RAM), 20 GB disk, Ubuntu 24.04, Shielded VM                    | Enough for nginx, the API and PostgreSQL, with headroom |
-| Static IP `archboard-ip` | Premium network tier                                                                        | DNS never changes, even if the VM is rebuilt            |
-| Firewall                 | 80/443 open to everyone; 22 for the deploy key only (no password login)                     | Only what the site and deployments need                 |
-| Snapshots                | Daily, kept 7 days                                                                          | Whole-disk recovery, on top of nightly database dumps   |
-| Protection               | Deletion protection; the boot disk survives VM replacement; image updates never recreate it | A configuration mistake can't wipe the database         |
+| Resource                 | Details                                                                  | Why                                                     |
+| ------------------------ | ------------------------------------------------------------------------ | ------------------------------------------------------- |
+| VM `archboard-vm`        | e2-small (2 vCPU burst, 2 GB RAM), 20 GB disk, Ubuntu 24.04, Shielded VM | Enough for nginx, the API and PostgreSQL, with headroom |
+| Static IP `archboard-ip` | Premium network tier                                                     | DNS never changes, even if the VM is rebuilt            |
+| Firewall                 | 80/443 open to everyone; 22 for the deploy key only (no password login)  | Only what the site and deployments need                 |
+| Snapshots                | Daily, kept 7 days                                                       | Whole-disk recovery, on top of nightly database dumps   |
+| Protection               | Deletion protection; the boot disk is kept even if the VM is deleted     | A mistaken delete can't wipe the database               |
 
 **What the VM runs:** nginx on the host serves the web app and proxies `/api` to the API container, which only the VM itself can reach. PostgreSQL runs in Docker with no public port. Its password is generated on the VM at first boot and never leaves it.
+
+**Changing the VM setup:** pushing doesn't update the start-up script on the VM. After editing it, copy it over and apply it at the next reboot:
+
+```bash
+gcloud compute instances add-metadata archboard-vm --zone asia-south1-a --metadata-from-file startup-script=infra/vm/startup.sh
+```
+
+**Rebuilding from scratch:**
+
+1. Create the resources in the table in `asia-south1`: a static IP, the two firewall rules on the `archboard-web` network tag, and the VM with that tag, that IP and the `archboard-vm` service account (log and metric writer only).
+2. Give the VM four metadata entries: `startup-script` from `infra/vm/startup.sh`, and `nginx-site`, `nginx-bootstrap` and `nginx-headers` from `archboard.conf`, `bootstrap.conf` and `security-headers.conf` in `infra/nginx`.
+3. Turn on deletion protection, keep the boot disk on delete, and attach a daily snapshot schedule with 7-day retention.
+4. Point DNS at the IP, set the `VM_HOST` variable, and run the Deploy workflow.
+5. To bring boards back, restore a database dump or start from a disk snapshot.
 
 **Cost:** roughly US$20 a month (VM, IP and disk), covered by Google Cloud credits.
 
@@ -273,7 +279,7 @@ flowchart LR
     direction TB
     c1["Lint · typecheck · unit tests<br/>dependency audit"]
     c2["Real PostgreSQL: migrations,<br/>drift check, seed, storage test"]
-    c3["Terraform fmt + validate"]
+    c3["Shell scripts parse"]
     c4["Playwright + axe<br/>4 screen sizes × 2 themes"]
   end
   ci -- "all green" --> deploy
@@ -283,15 +289,14 @@ flowchart LR
     d2 --> d3["Web: upload, switch atomically<br/>(last 5 releases kept)"]
     d3 --> d4["Smoke test over HTTPS"]
   end
-  infra["Infrastructure workflow<br/>Terraform plan on PRs, apply on main"]
 ```
 
 - **Zero-downtime web releases:** each release goes into its own folder, and a symlink switch makes it live in one step.
 - **Safe API releases:** database migrations run first. If the new container doesn't pass its health check within 90 seconds, the previous image is restored automatically.
 - **One-click rollback:** run the Deploy workflow with _rollback_ ticked to restore the previous web release and API image.
-- **Keyless cloud access:** the infrastructure workflow uses Workload Identity Federation. Only this repository can use it, and its service account can manage Compute Engine but can't change permissions.
+- **No cloud credentials in CI:** GitHub holds no Google Cloud identity or key. It can only reach the VM over SSH as the deploy user.
 
-**Configuration** lives in GitHub repository variables, all of them public values: the VM's IP, the Clerk publishable key, the Clerk JWT public key and the GCP identifiers. The only secret is `VM_SSH_KEY`, the deploy user's private key.
+**Configuration** lives in GitHub repository variables, all of them public values: the VM's IP, the Clerk publishable key and the Clerk JWT public key. The only secret is `VM_SSH_KEY`, the deploy user's private key.
 
 ---
 
@@ -303,21 +308,21 @@ flowchart LR
 - **Transport:** HTTPS only, with HSTS and HTTP/2. `www` redirects to the main domain.
 - **Browser hardening:** a strict Content-Security-Policy with no inline scripts (only our code and Clerk's sign-in scripts can run), `nosniff`, a strict referrer policy and `frame-ancestors 'none'`.
 - **Input limits:** board content must be a valid Yjs document and is capped at 2 MB.
-- **Least privilege:** the VM's deploy user can run exactly two root helpers: apply a validated nginx config, and deploy or roll back the API. CI's cloud identity can't grant itself permissions.
+- **Deploy access:** the deploy user's sudo is limited to two helpers (apply nginx config, deploy or roll back the API). The second runs the uploaded Compose file as root, so treat `VM_SSH_KEY` as root access to the VM. CI has no Google Cloud identity.
 - **Supply chain:** exact dependency versions, a production dependency audit in CI, and icon packs verified by SHA-256.
 
 ---
 
 ## Quality and testing
 
-| Layer          | Tools                                     | Covers                                                                                                                                                                                         |
-| -------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unit           | Vitest, fast-check                        | Diagram operations, schema validation (1,000-case round-trip property test), capacity maths, icon search ranking, board policy                                                                 |
-| API            | Supertest                                 | Sign-in required, one board per account, ownership checks, merging concurrent saves, invalid content, 7-day expiry, token checks (wrong origin, expired, forged)                               |
-| Database       | Real PostgreSQL in CI                     | Migrations from scratch, no schema drift, idempotent seed, concurrent-create race                                                                                                              |
-| End-to-end     | Playwright                                | Build, connect, rename and reload; undo; drag and drop; groups; properties; connection styles; pen fidelity; shapes and text; capacity calculator; landing page, at 375, 768, 1024 and 1440 px |
-| Accessibility  | axe-core                                  | No serious or critical WCAG 2.1 AA violations, in light and dark                                                                                                                               |
-| Infrastructure | Terraform validate, `bash -n`, `nginx -t` | Both Terraform layers, every shell script, and the nginx config before every reload                                                                                                            |
+| Layer          | Tools                 | Covers                                                                                                                                                                                         |
+| -------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit           | Vitest, fast-check    | Diagram operations, schema validation (1,000-case round-trip property test), capacity maths, icon search ranking, board policy                                                                 |
+| API            | Supertest             | Sign-in required, one board per account, ownership checks, merging concurrent saves, invalid content, 7-day expiry, token checks (wrong origin, expired, forged)                               |
+| Database       | Real PostgreSQL in CI | Migrations from scratch, no schema drift, idempotent seed, concurrent-create race                                                                                                              |
+| End-to-end     | Playwright            | Build, connect, rename and reload; undo; drag and drop; groups; properties; connection styles; pen fidelity; shapes and text; capacity calculator; landing page, at 375, 768, 1024 and 1440 px |
+| Accessibility  | axe-core              | No serious or critical WCAG 2.1 AA violations, in light and dark                                                                                                                               |
+| Infrastructure | `bash -n`, `nginx -t` | Every shell script, and the nginx config before every reload                                                                                                                                   |
 
 ---
 
@@ -379,7 +384,6 @@ packages/
   shared/           Errors, config loading, logging
   config/           TypeScript, ESLint and Prettier presets
 infra/
-  terraform/        Google Cloud infrastructure (bootstrap + main layers)
   vm/               VM start-up script (nginx, certbot, Docker, deploy user, backups)
   nginx/            Production nginx config and security headers
   docker/           Production API image
