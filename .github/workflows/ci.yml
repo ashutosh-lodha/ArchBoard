@@ -98,7 +98,8 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @archboard/icons build
+      - name: Icons (official AWS, Azure and Google Cloud packs, SHA-256 verified)
+        run: pnpm icons:import
       - run: pnpm --filter @archboard/e2e exec playwright install --with-deps chromium
       - run: pnpm test:e2e
         env:
