@@ -2,7 +2,7 @@ import { Button, EmptyState, Skeleton } from '@archboard/ui';
 import { Clock, Compass, LogIn, TriangleAlert } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
-import { SignInButton, useAccount } from '../auth/account.tsx';
+import { SignInLink, useAccount } from '../auth/account.tsx';
 import {
   ApiError,
   deleteServerBoard,
@@ -76,9 +76,9 @@ function AccountBoardRoute({ boardId }: { boardId: string }) {
         title="Sign in to open this board"
         description="This board is saved to an ArchBoard account. Sign in with that account to open it."
         action={
-          <SignInButton mode="modal">
-            <Button variant="primary">Sign in</Button>
-          </SignInButton>
+          <Button asChild variant="primary">
+            <SignInLink>Sign in</SignInLink>
+          </Button>
         }
       />
     );

@@ -8,7 +8,7 @@ Lay out real AWS, Google Cloud and Azure components, connect and group them, wri
 
 ![The ArchBoard landing page: "The board built for system design interviews", with a framed screenshot of the editor](docs/images/landing.jpg)
 
-> **Board rules:** one board per account, deleted automatically **7 days** after it's created. Only signed-in users can create a board, and only you can open yours.
+> **How boards work:** sign in (email or Google) and you get one board, kept for **7 days**. Only you can open it.
 
 ---
 
@@ -130,28 +130,28 @@ flowchart LR
 
 ## What each technology is used for
 
-| Layer                      | Technology                    | What it does here                                                                                                 |
-| -------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **Web app**                | React 19, TypeScript, Vite    | The editor and landing page. Vite builds them into static files                                                   |
-|                            | React Flow 12                 | The canvas: panning, zooming, nodes, connections, selection                                                       |
-|                            | Yjs                           | The board's data model. Every change is a small "update", and updates from different tabs merge without conflicts |
-|                            | IndexedDB (y-indexeddb)       | Keeps a copy of the board in the browser, so edits are never lost while offline                                   |
-|                            | Tailwind CSS v4, Radix UI     | Design system: light/dark tokens, accessible menus, dialogs and tooltips                                          |
-|                            | Clerk React SDK               | Sign-in modal, user menu, and short-lived session tokens for API calls                                            |
-| **API**                    | Node.js 22, Express 5         | Board endpoints: create, load, save, delete                                                                       |
-|                            | @clerk/backend                | Verifies each request's session token with Clerk's public key, with no network call                               |
-|                            | Zod, Pino                     | Configuration checked at start-up; structured JSON logs with request ids                                          |
-| **Data**                   | PostgreSQL 16, Prisma 7       | One row per board: the owner's Clerk id, the board content (Yjs state) and its expiry date                        |
-| **Edge**                   | nginx                         | HTTPS, HTTP/2, security headers, caching of static files, and the `/api` reverse proxy                            |
-|                            | certbot (Let's Encrypt)       | Free TLS certificates, renewed automatically                                                                      |
-| **Hosting**                | Google Compute Engine         | One e2-small VM in Mumbai with a static IP                                                                        |
-|                            | Docker Compose                | Runs the API and PostgreSQL as containers, with health checks and restart policies                                |
-|                            | Hostinger DNS                 | Points `archboard.ashutoshdev.online` at the VM and `clerk.archboard…` at Clerk                                   |
-| **Infrastructure as code** | Terraform                     | Creates the VM, static IP, firewall rules, snapshot schedule and CI identity                                      |
-| **CI/CD**                  | GitHub Actions                | Tests every change, applies Terraform, builds and deploys                                                         |
-|                            | Workload Identity Federation  | Lets GitHub Actions use Google Cloud with short-lived tokens, with no stored key                                  |
-| **Testing**                | Vitest, fast-check, Supertest | Unit, property-based and API tests                                                                                |
-|                            | Playwright, axe-core          | End-to-end tests at 4 screen sizes, plus accessibility checks                                                     |
+| Layer                      | Technology                    | What it does here                                                                                                             |
+| -------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Web app**                | React 19, TypeScript, Vite    | The editor and landing page. Vite builds them into static files                                                               |
+|                            | React Flow 12                 | The canvas: panning, zooming, nodes, connections, selection                                                                   |
+|                            | Yjs                           | The board's data model. Every change is a small "update", and updates from different tabs merge without conflicts             |
+|                            | IndexedDB (y-indexeddb)       | Keeps a copy of the board in the browser, so edits are never lost while offline                                               |
+|                            | Tailwind CSS v4, Radix UI     | Design system: light/dark tokens, accessible menus, dialogs and tooltips                                                      |
+|                            | Clerk React SDK               | Sign-in and sign-up pages on our own domain (`/sign-in`, `/sign-up`), user menu, and short-lived session tokens for API calls |
+| **API**                    | Node.js 22, Express 5         | Board endpoints: create, load, save, delete                                                                                   |
+|                            | @clerk/backend                | Verifies each request's session token with Clerk's public key, with no network call                                           |
+|                            | Zod, Pino                     | Configuration checked at start-up; structured JSON logs with request ids                                                      |
+| **Data**                   | PostgreSQL 16, Prisma 7       | One row per board: the owner's Clerk id, the board content (Yjs state) and its expiry date                                    |
+| **Edge**                   | nginx                         | HTTPS, HTTP/2, security headers, caching of static files, and the `/api` reverse proxy                                        |
+|                            | certbot (Let's Encrypt)       | Free TLS certificates, renewed automatically                                                                                  |
+| **Hosting**                | Google Compute Engine         | One e2-small VM in Mumbai with a static IP                                                                                    |
+|                            | Docker Compose                | Runs the API and PostgreSQL as containers, with health checks and restart policies                                            |
+|                            | Hostinger DNS                 | Points `archboard.ashutoshdev.online` at the VM and `clerk.archboard…` at Clerk                                               |
+| **Infrastructure as code** | Terraform                     | Creates the VM, static IP, firewall rules, snapshot schedule and CI identity                                                  |
+| **CI/CD**                  | GitHub Actions                | Tests every change, applies Terraform, builds and deploys                                                                     |
+|                            | Workload Identity Federation  | Lets GitHub Actions use Google Cloud with short-lived tokens, with no stored key                                              |
+| **Testing**                | Vitest, fast-check, Supertest | Unit, property-based and API tests                                                                                            |
+|                            | Playwright, axe-core          | End-to-end tests at 4 screen sizes, plus accessibility checks                                                                 |
 
 ---
 
@@ -197,7 +197,7 @@ sequenceDiagram
 
 **If a save fails** (offline, server restart), the browser retries with backoff and shows the status in the header. Nothing is lost, because the browser copy holds every change until the server confirms it.
 
-### Board rules, enforced by the server
+### Board limits, enforced by the server
 
 | Rule                                    | How it's enforced                                                                                              |
 | --------------------------------------- | -------------------------------------------------------------------------------------------------------------- |

@@ -2,7 +2,7 @@ import { Button, ConfirmDialog, EmptyState, Skeleton, toast } from '@archboard/u
 import { LayoutDashboard, LogIn, TriangleAlert } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { SignInButton, useAccount } from '../auth/account.tsx';
+import { SignInLink, useAccount } from '../auth/account.tsx';
 import {
   createServerBoard,
   deleteServerBoard,
@@ -86,9 +86,9 @@ export function NewBoardPage() {
           title="Sign in to start your board"
           description={`Your board is saved to your account, so it opens on any device. One board per account, deleted automatically ${BOARD_LIFETIME_DAYS} days after it's created.`}
           action={
-            <SignInButton mode="modal">
-              <Button variant="primary">Sign in</Button>
-            </SignInButton>
+            <Button asChild variant="primary">
+              <SignInLink>Sign in</SignInLink>
+            </Button>
           }
         />
       </Centered>

@@ -3,21 +3,20 @@ import {
   ArrowRight,
   Boxes,
   Calculator,
-  Clock,
   Code2,
   HardDrive,
   Lightbulb,
+  MonitorSmartphone,
   Moon,
   PenLine,
   Search,
+  Sparkles,
   Spline,
   Sun,
-  UserRound,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { AccountButton } from '../auth/account.tsx';
-import { BOARD_LIFETIME_DAYS } from '../board/local-boards.ts';
+import { AccountButton, SIGN_IN_PATH, useAccount } from '../auth/account.tsx';
 
 const REPO_URL = 'https://github.com/ashutosh-lodha/ArchBoard';
 
@@ -33,11 +32,36 @@ export function HomePage() {
         <Hero />
         <Features />
         <HowItWorks />
-        <Rules />
         <FinalCta />
       </main>
       <SiteFooter />
     </div>
+  );
+}
+
+/**
+ * The main call to action. Signed-out visitors are sent to sign in (boards need an account), and
+ * come back to /new afterwards; signed-in people go straight to their board.
+ */
+function StartCta({
+  size,
+  signedOutLabel = 'Sign in',
+  signedInLabel = 'Open your board',
+}: {
+  size: 'sm' | 'lg';
+  signedOutLabel?: string;
+  signedInLabel?: string;
+}) {
+  const { enabled, signedIn } = useAccount();
+  const signIn = enabled && !signedIn;
+  const label = !enabled ? 'Start a board' : signIn ? signedOutLabel : signedInLabel;
+  return (
+    <Button asChild variant="primary" size={size}>
+      <Link to={signIn ? `${SIGN_IN_PATH}?redirect_url=%2Fnew` : '/new'}>
+        {label}
+        {size === 'lg' ? <ArrowRight /> : null}
+      </Link>
+    </Button>
   );
 }
 
@@ -64,7 +88,6 @@ function SiteHeader() {
           {[
             ['#features', 'Features'],
             ['#how', 'How it works'],
-            ['#rules', 'The rules'],
           ].map(([href, label]) => (
             <a
               key={href}
@@ -82,13 +105,23 @@ function SiteHeader() {
           >
             {resolved === 'dark' ? <Sun /> : <Moon />}
           </IconButton>
-          <AccountButton compact />
-          <Button asChild variant="primary" size="sm">
-            <Link to="/new">Start a board</Link>
-          </Button>
+          <HeaderAccount />
         </div>
       </div>
     </header>
+  );
+}
+
+/** Signed out: one Sign in button. Signed in: the user menu and a way back to the board. */
+function HeaderAccount() {
+  const { enabled, loaded, signedIn } = useAccount();
+  if (enabled && !loaded) return null;
+  if (enabled && !signedIn) return <StartCta size="sm" />;
+  return (
+    <>
+      <AccountButton compact />
+      <StartCta size="sm" />
+    </>
   );
 }
 
@@ -119,24 +152,20 @@ function Hero() {
           size the system with a built-in capacity calculator.
         </p>
         <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-          <Button asChild variant="primary" size="lg">
-            <Link to="/new">
-              Start a board, free <ArrowRight />
-            </Link>
-          </Button>
+          <StartCta size="lg" />
           <Button asChild variant="secondary" size="lg">
             <a href="#how">See how it works</a>
           </Button>
         </div>
         <ul className="mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-text-muted">
           <li className="inline-flex items-center gap-1.5">
-            <UserRound className="size-4" aria-hidden="true" /> One board per account
+            <Sparkles className="size-4" aria-hidden="true" /> Free to use
           </li>
           <li className="inline-flex items-center gap-1.5">
-            <Clock className="size-4" aria-hidden="true" /> Deleted after {BOARD_LIFETIME_DAYS} days
+            <HardDrive className="size-4" aria-hidden="true" /> Saves as you work
           </li>
           <li className="inline-flex items-center gap-1.5">
-            <HardDrive className="size-4" aria-hidden="true" /> Saved to your account
+            <MonitorSmartphone className="size-4" aria-hidden="true" /> Opens on any device
           </li>
         </ul>
       </div>
@@ -309,60 +338,6 @@ function HowItWorks() {
   );
 }
 
-function Rule({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
-  return (
-    <li className="flex gap-4">
-      <div
-        className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-pen-subtle text-pen [&_svg]:size-5"
-        aria-hidden="true"
-      >
-        {icon}
-      </div>
-      <div>
-        <h3 className="font-semibold">{title}</h3>
-        <p className="mt-1 text-base text-text-muted">{children}</p>
-      </div>
-    </li>
-  );
-}
-
-function Rules() {
-  return (
-    <section
-      id="rules"
-      aria-labelledby="rules-title"
-      className="scroll-mt-16 border-b border-border"
-    >
-      <div className="mx-auto max-w-6xl px-4 py-20">
-        <SectionHeading
-          id="rules-title"
-          eyebrow="The rules, upfront"
-          title="Simple limits, no surprises"
-          intro="ArchBoard is free to use. To keep it that way, boards are short-lived."
-        />
-        <ul className="grid gap-8 md:grid-cols-2">
-          <Rule icon={<UserRound />} title="One board per account">
-            Each account has one board at a time. Starting another means deleting the current one
-            first, and you'll always be asked before anything is deleted.
-          </Rule>
-          <Rule icon={<Clock />} title={`Deleted after ${BOARD_LIFETIME_DAYS} days`}>
-            Boards are deleted automatically {BOARD_LIFETIME_DAYS} days after they're created. The
-            board shows how many days are left.
-          </Rule>
-          <Rule icon={<HardDrive />} title="Saved to your account">
-            Your board is saved on our server as you work, so it opens on any device you sign in on.
-            Unsaved changes are kept in your browser and sent as soon as you're back online.
-          </Rule>
-          <Rule icon={<ArrowRight />} title="Private by default">
-            Only you can open your board. We store your account id and the board itself, never your
-            email or name, and both are gone when the board is deleted.
-          </Rule>
-        </ul>
-      </div>
-    </section>
-  );
-}
-
 function FinalCta() {
   return (
     <section aria-labelledby="cta-title" className="border-b border-border">
@@ -372,14 +347,10 @@ function FinalCta() {
             Your next design round starts here
           </h2>
           <p className="mt-2 text-md text-text-muted">
-            Free, ready in one click, saved to your account.
+            Free, ready in one click, and saved as you work.
           </p>
         </div>
-        <Button asChild variant="primary" size="lg">
-          <Link to="/new">
-            Start a board <ArrowRight />
-          </Link>
-        </Button>
+        <StartCta size="lg" signedOutLabel="Sign in to start" />
       </div>
     </section>
   );

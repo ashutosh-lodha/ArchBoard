@@ -1,18 +1,22 @@
 import { ThemeProvider, Toaster, TooltipProvider, useTheme } from '@archboard/ui';
 import { lazy, Suspense, useSyncExternalStore } from 'react';
-import { createBrowserRouter, type RouteObject } from 'react-router';
+import { createBrowserRouter, Outlet, type RouteObject } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 import { AccountProvider } from './auth/account.tsx';
 import { HomePage } from './routes/home.tsx';
 import { NotFoundPage, RouteError } from './routes/errors.tsx';
 import { NewBoardPage } from './routes/new-board.tsx';
+import { SignInPage, SignUpPage } from './routes/auth-pages.tsx';
 
 const GalleryPage = lazy(() => import('./routes/gallery.tsx'));
 // The editor (React Flow, Yjs) is its own chunk so the home page stays light.
 const BoardPage = lazy(() => import('./routes/board.tsx'));
 
-const routes: RouteObject[] = [
+const pages: RouteObject[] = [
   { path: '/', element: <HomePage />, errorElement: <RouteError /> },
+  // Clerk moves between sign-in steps under these paths (/sign-in/factor-one and so on).
+  { path: '/sign-in/*', element: <SignInPage />, errorElement: <RouteError /> },
+  { path: '/sign-up/*', element: <SignUpPage />, errorElement: <RouteError /> },
   { path: '/new', element: <NewBoardPage />, errorElement: <RouteError /> },
   {
     path: '/b/:boardId',
@@ -40,6 +44,18 @@ const routes: RouteObject[] = [
   { path: '*', element: <NotFoundPage /> },
 ];
 
+// Accounts sit inside the router so Clerk can navigate without full page reloads.
+const routes: RouteObject[] = [
+  {
+    element: (
+      <AccountProvider>
+        <Outlet />
+      </AccountProvider>
+    ),
+    children: pages,
+  },
+];
+
 const router = createBrowserRouter(routes);
 
 function ThemedToaster() {
@@ -55,12 +71,10 @@ function ThemedToaster() {
 export function App() {
   return (
     <ThemeProvider>
-      <AccountProvider>
-        <TooltipProvider delayDuration={400} skipDelayDuration={200}>
-          <RouterProvider router={router} />
-          <ThemedToaster />
-        </TooltipProvider>
-      </AccountProvider>
+      <TooltipProvider delayDuration={400} skipDelayDuration={200}>
+        <RouterProvider router={router} />
+        <ThemedToaster />
+      </TooltipProvider>
     </ThemeProvider>
   );
 }
