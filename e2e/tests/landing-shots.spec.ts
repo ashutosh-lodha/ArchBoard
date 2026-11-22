@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 /**
  * Generates the real product screenshots used on the landing page and as the social preview
@@ -14,7 +14,7 @@ const out = join(here, '../../apps/web/public/landing');
 test.skip(!process.env.SHOTS, 'set SHOTS=1 to regenerate landing screenshots');
 
 /** Tests run without Clerk; show the save status a signed-in person sees in production. */
-async function showAccountSaveStatus(page: import('@playwright/test').Page) {
+async function showAccountSaveStatus(page: Page) {
   await page.evaluate(() => {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
