@@ -7,11 +7,16 @@ import {
   DEFAULT_NOTE_SIZE,
   deleteElements,
   distribute,
+  duplicate,
+  extractFragment,
   GROUP_LABELS,
   groupNodes,
   loadDiagramIntoDoc,
   parseDiagram,
+  parseFragment,
+  pasteFragment,
   reparent,
+  serializeFragment,
   ungroup,
   type AlignMode,
   type DiagramDoc,
@@ -653,7 +658,53 @@ function Editor({ board, record, onDeleteBoard = deleteCurrentBoard }: BoardEdit
     [addComponent, registry, rf],
   );
 
-  // Keyboard shortcuts (UX §6). Never fire while typing in a field.
+  // Copy / paste / duplicate. Copy writes the selection to the system clipboard as ArchBoard data,
+  // so it can be pasted on this board or another; pasted items get fresh ids and are selected.
+  const selectSoon = useCallback(
+    (ids: string[]) => setTimeout(() => selectOnly(ids), 50),
+    [selectOnly],
+  );
+  useEffect(() => {
+    const selectedIds = () =>
+      rf
+        .getNodes()
+        .filter((n) => n.selected)
+        .map((n) => n.id);
+    const onCopy = (e: ClipboardEvent) => {
+      if (isTypingTarget(e.target) || !e.clipboardData) return;
+      const ids = selectedIds();
+      if (ids.length === 0) return;
+      e.preventDefault();
+      e.clipboardData.setData('text/plain', serializeFragment(extractFragment(diagram, ids)));
+      toast(`Copied ${ids.length} item${ids.length === 1 ? '' : 's'}`);
+    };
+    const onPaste = (e: ClipboardEvent) => {
+      if (isTypingTarget(e.target) || !e.clipboardData) return;
+      const fragment = parseFragment(e.clipboardData.getData('text/plain'));
+      if (!fragment || fragment.nodes.length === 0) return;
+      e.preventDefault();
+      const result = pasteFragment(diagram, fragment, { origin: LOCAL_ORIGIN });
+      selectSoon(result.rootIds);
+    };
+    const onDuplicate = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'd' || isTypingTarget(e.target))
+        return;
+      e.preventDefault();
+      const ids = selectedIds();
+      if (ids.length === 0) return;
+      selectSoon(duplicate(diagram, ids, { origin: LOCAL_ORIGIN }).rootIds);
+    };
+    window.addEventListener('copy', onCopy);
+    window.addEventListener('paste', onPaste);
+    window.addEventListener('keydown', onDuplicate);
+    return () => {
+      window.removeEventListener('copy', onCopy);
+      window.removeEventListener('paste', onPaste);
+      window.removeEventListener('keydown', onDuplicate);
+    };
+  }, [diagram, rf, selectSoon]);
+
+  // Keyboard shortcuts. Never fire while typing in a field.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (isTypingTarget(e.target)) return;
@@ -824,7 +875,7 @@ function Editor({ board, record, onDeleteBoard = deleteCurrentBoard }: BoardEdit
               onConnect={onConnect}
               connectionMode={ConnectionMode.Loose}
               deleteKeyCode={null}
-              // UX §5.3: Shift-click adds to the selection (Ctrl/⌘ work too).
+              // Shift-click adds to the selection (Ctrl/⌘ work too).
               multiSelectionKeyCode={['Shift', 'Meta', 'Control']}
               snapToGrid
               snapGrid={[8, 8]}

@@ -11,25 +11,24 @@ WORKDIR /repo
 # Manifests first, for layer caching. Every workspace manifest is copied so the lockfile matches.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/api/package.json apps/api/
-COPY apps/sync/package.json apps/sync/
 COPY apps/web/package.json apps/web/
 COPY e2e/package.json e2e/
 COPY packages/config/package.json packages/config/
 COPY packages/shared/package.json packages/shared/
 COPY packages/diagram-schema/package.json packages/diagram-schema/
-COPY packages/protocol/package.json packages/protocol/
 COPY packages/icons/package.json packages/icons/
 COPY packages/ui/package.json packages/ui/
 COPY packages/db/package.json packages/db/prisma.config.ts packages/db/
 COPY packages/db/prisma packages/db/prisma
 
-# Only the API and its workspace dependencies, production deps only (the Prisma CLI, which runs
-# migrations, is a regular dependency of @archboard/db).
-RUN pnpm install --frozen-lockfile --prod --filter "@archboard/api..." --fetch-retries 5
+# Only the API and its workspace dependencies (the Prisma CLI runs migrations; the shared
+# tsconfig presets are needed by tsx and Prisma at runtime).
+RUN pnpm install --frozen-lockfile --filter "@archboard/api..." --fetch-retries 5
+
+COPY packages/config packages/config
 
 COPY packages/shared packages/shared
 COPY packages/diagram-schema packages/diagram-schema
-COPY packages/protocol packages/protocol
 COPY packages/db packages/db
 COPY apps/api apps/api
 RUN pnpm --filter @archboard/db generate

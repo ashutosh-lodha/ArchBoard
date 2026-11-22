@@ -250,3 +250,15 @@ describe('Clerk session tokens', () => {
     expect(await authenticate(req())).toBeNull();
   });
 });
+
+describe('CLERK_JWT_KEY formats', () => {
+  it('accepts the PEM with newlines, escaped newlines, or spaces', async () => {
+    const { normalizePem } = await import('../src/env.ts');
+    const { publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+    const pem = publicKey.export({ type: 'spki', format: 'pem' }).toString().trim();
+    expect(normalizePem(pem)).toBe(pem);
+    expect(normalizePem(pem.replace(/\n/g, '\n'))).toBe(pem);
+    expect(normalizePem(pem.replace(/\n/g, ' '))).toBe(pem);
+    expect(normalizePem('not a key')).toBeUndefined();
+  });
+});

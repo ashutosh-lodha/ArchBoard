@@ -1,9 +1,9 @@
 /**
  * Board storage, independent of the database so routes can be tested with an in-memory store.
  *
- * Board policy (docs/DESIGN.md §7.4): **one live board per person, deleted automatically 7 days
- * after it was created.** The Postgres store enforces "one per person" with a partial unique
- * index, so the rule holds even if two requests race.
+ * Board policy: **one board per account, deleted automatically 7 days after it was created.**
+ * The Postgres store enforces "one per account" with a unique index on the owner, so the rule
+ * holds even if two requests race.
  */
 export const BOARD_LIFETIME_DAYS = 7;
 export const BOARD_LIFETIME_MS = BOARD_LIFETIME_DAYS * 24 * 60 * 60 * 1000;

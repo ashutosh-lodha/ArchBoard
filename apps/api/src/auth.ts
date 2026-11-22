@@ -4,13 +4,8 @@ import type { Logger } from '@archboard/shared/logger';
 import type { Authenticate } from './boards/routes.ts';
 
 export interface ClerkAuthOptions {
-  /**
-   * Clerk's JWT public key (PEM). Verifies session tokens with no network call. It's a public
-   * key, so it isn't a secret. Preferred in production.
-   */
-  jwtKey?: string | undefined;
-  /** Alternative: the Clerk secret key, used to fetch (and cache) Clerk's signing keys. */
-  secretKey?: string | undefined;
+  /** Clerk's JWT public key (PEM). Verifies session tokens with no network call. */
+  jwtKey: string;
   /** Only tokens issued for these origins are accepted (Clerk's "azp" claim). */
   authorizedParties: string[];
   logger: Logger;
@@ -29,8 +24,7 @@ export function clerkAuthenticate(options: ClerkAuthOptions): Authenticate {
     let result: unknown;
     try {
       result = await verifyToken(token, {
-        ...(options.jwtKey ? { jwtKey: options.jwtKey } : {}),
-        ...(options.secretKey ? { secretKey: options.secretKey } : {}),
+        jwtKey: options.jwtKey,
         authorizedParties: options.authorizedParties,
       });
     } catch (err) {

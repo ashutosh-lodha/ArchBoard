@@ -1,9 +1,9 @@
 import { customAlphabet } from 'nanoid';
 
 /**
- * Board policy: **one board per person at a time, deleted automatically 7 days after it was
- * created.** Boards currently live in this browser (IndexedDB), so the policy is enforced here;
- * when accounts and the server API arrive (Phase 3) the same rule is enforced server-side.
+ * Browser-only boards, used when Clerk isn't configured (local development and tests). The same
+ * policy as account boards applies: one board at a time, deleted automatically 7 days after it
+ * was created. In production the API enforces this for every account.
  */
 export const BOARD_LIFETIME_DAYS = 7;
 const LIFETIME_MS = BOARD_LIFETIME_DAYS * 24 * 60 * 60 * 1000;

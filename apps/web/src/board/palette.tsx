@@ -35,7 +35,7 @@ export interface PaletteProps {
 }
 
 /**
- * The component panel (UX §5.1). Search matches labels and aliases ("lb", "elb", "load balancer"),
+ * The component panel. Search matches labels and aliases ("lb", "elb", "load balancer"),
  * tabs filter by provider, recents sit on top. Click adds at the centre of the view; drag places
  * the component exactly where it's dropped.
  */

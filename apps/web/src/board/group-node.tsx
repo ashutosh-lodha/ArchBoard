@@ -8,7 +8,7 @@ import type { FlowNode, GroupNodeData } from './projection.ts';
 import { LOCAL_ORIGIN } from './use-board-doc.ts';
 
 /**
- * Container colours (UX §10.1): a light tint with a stronger border. Logical boundaries
+ * Container colours: a light tint with a stronger border. Logical boundaries
  * (subnet, boundary) are dashed; physical ones (region, AZ, VPC, cluster) are solid.
  */
 const GROUP_STYLE: Record<GroupType, { box: string; tab: string; dashed: boolean }> = {

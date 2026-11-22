@@ -5,7 +5,7 @@ export * from '../generated/prisma/client.ts';
 
 export interface CreateClientOptions {
   connectionString: string;
-  /** Pool size per process. Small VM: keep api + 2×sync + staging under max_connections (40). */
+  /** Pool size per process. */
   maxConnections?: number;
 }
 
@@ -13,11 +13,7 @@ export interface CreateClientOptions {
 export function createPrismaClient(options: CreateClientOptions): PrismaClient {
   const adapter = new PrismaPg({
     connectionString: options.connectionString,
-    max: options.maxConnections ?? 8,
+    max: options.maxConnections ?? 5,
   });
   return new PrismaClient({ adapter });
 }
-
-/** "u_<userId>" / "g_<guestId>" principal helpers, shared by api and sync. */
-export const principalOfUser = (userId: string): string => `u_${userId}`;
-export const principalOfGuest = (guestId: string): string => `g_${guestId}`;

@@ -1,5 +1,4 @@
 import { createServer } from 'node:http';
-import { Redis } from 'ioredis';
 import { createPrismaClient } from '@archboard/db';
 import { createLogger } from '@archboard/shared/logger';
 import { createApp, type HealthCheck } from './app.ts';
@@ -11,21 +10,12 @@ import { loadApiEnv } from './env.ts';
 const env = loadApiEnv();
 const logger = createLogger('api', env.LOG_LEVEL);
 const prisma = createPrismaClient({ connectionString: env.DATABASE_URL, maxConnections: 5 });
-const redis = env.REDIS_URL
-  ? new Redis(env.REDIS_URL, { maxRetriesPerRequest: 2, lazyConnect: false })
-  : null;
-redis?.on('error', (err) => logger.warn({ err }, 'redis error'));
 
 const checks: Record<string, HealthCheck> = {
   database: async () => {
     await prisma.$queryRaw`SELECT 1`;
   },
 };
-if (redis) {
-  checks.redis = async () => {
-    await redis.ping();
-  };
-}
 
 const store = createPrismaBoardStore(prisma);
 const app = createApp({
@@ -37,7 +27,6 @@ const app = createApp({
     store,
     authenticate: clerkAuthenticate({
       jwtKey: env.CLERK_JWT_KEY,
-      secretKey: env.CLERK_SECRET_KEY,
       authorizedParties: [env.PUBLIC_ORIGIN],
       logger,
     }),
@@ -58,7 +47,7 @@ async function shutdown(signal: string): Promise<void> {
   force.unref();
   stopExpiryJob();
   server.close();
-  await Promise.allSettled([prisma.$disconnect(), redis?.quit()]);
+  await prisma.$disconnect().catch(() => undefined);
   process.exit(0);
 }
 process.on('SIGTERM', () => void shutdown('SIGTERM'));

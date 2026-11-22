@@ -2,7 +2,7 @@ import { cn } from '@archboard/ui';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 
 /**
- * Inline text editor used on the canvas (UX §5.3): Enter confirms (Ctrl/⌘+Enter when multi-line),
+ * Inline text editor used on the canvas: Enter confirms (Ctrl/⌘+Enter when multi-line),
  * Esc cancels, blur confirms, and an empty single-line value reverts.
  */
 export function InlineEdit({

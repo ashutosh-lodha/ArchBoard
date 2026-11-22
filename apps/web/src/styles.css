@@ -4,7 +4,7 @@
 
 /*
  * React Flow theming with our tokens. Edges are calm graphite lines; async edges are dashed
- * (UX §5.2); connection handles appear on hover/selection and get a 44px hit area on touch.
+ *; connection handles appear on hover/selection and get a 44px hit area on touch.
  */
 .react-flow {
   --xy-background-color: var(--canvas);

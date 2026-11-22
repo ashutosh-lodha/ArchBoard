@@ -21,12 +21,12 @@ describe('health endpoints', () => {
       logger,
       checks: {
         database: async () => undefined,
-        redis: async () => Promise.reject(new Error('down')),
+        search: async () => Promise.reject(new Error('down')),
       },
     });
     const res = await request(app).get('/api/health/ready');
     expect(res.status).toBe(503);
-    expect(res.body).toEqual({ status: 'degraded', checks: { database: 'ok', redis: 'fail' } });
+    expect(res.body).toEqual({ status: 'degraded', checks: { database: 'ok', search: 'fail' } });
   });
 
   it('times out a hanging dependency instead of hanging the probe', async () => {

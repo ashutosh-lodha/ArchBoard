@@ -75,7 +75,7 @@ test('J1: build, connect, rename, and it survives a reload', async ({ page, isMo
   await title.press('Enter');
 
   await expect(page.getByRole('status').filter({ hasText: 'Saved on this device' })).toBeVisible();
-  await page.screenshot({ path: `../docs/reviews/phase-2/j1-${info.project.name}.png` });
+  await page.screenshot({ path: info.outputPath(`j1-${info.project.name}.png`) });
 
   await page.reload();
   await expect(node(page, 'URL service')).toBeVisible();

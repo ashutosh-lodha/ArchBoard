@@ -1,5 +1,5 @@
 import type { PrismaClient } from '@archboard/db';
-import { BoardExistsError, type BoardMeta, type BoardStore } from './store.ts';
+import { BOARD_LIFETIME_MS, BoardExistsError, type BoardStore } from './store.ts';
 
 const META = { id: true, title: true, createdAt: true, expiresAt: true, updatedAt: true } as const;
 
@@ -10,44 +10,30 @@ function isUniqueViolation(err: unknown): boolean {
   return typeof err === 'object' && err !== null && 'code' in err && err.code === 'P2002';
 }
 
-/** Postgres-backed board storage (Prisma). */
+/** Postgres-backed board storage (Prisma). "One per account" is the unique index on ownerId. */
 export function createPrismaBoardStore(prisma: PrismaClient): BoardStore {
-  const live = (now: Date) => ({ deletedAt: null, expiresAt: { gt: now } });
+  const findLiveBoard: BoardStore['findLiveBoard'] = (ownerId, now) =>
+    prisma.board.findFirst({ where: { ownerId, expiresAt: { gt: now } }, select: META });
 
   return {
-    async findLiveBoard(clerkId, now) {
-      return prisma.board.findFirst({
-        where: { owner: { clerkId }, ...live(now) },
-        select: META,
-      });
-    },
+    findLiveBoard,
 
-    async create(clerkId, content, now) {
-      // Expired boards still hold the "one per person" slot until the cleanup job runs:
-      // remove this person's expired boards first.
-      await prisma.board.deleteMany({
-        where: { owner: { clerkId }, deletedAt: null, expiresAt: { lte: now } },
-      });
-      // No personal data is stored: Clerk owns the profile, we keep only the id.
-      const user = await prisma.user.upsert({
-        where: { clerkId },
-        update: {},
-        create: { clerkId, name: 'ArchBoard user' },
-        select: { id: true },
-      });
+    async create(ownerId, content, now) {
+      // An expired board still holds the account's slot until the cleanup job runs: remove it.
+      await prisma.board.deleteMany({ where: { ownerId, expiresAt: { lte: now } } });
       try {
         return await prisma.board.create({
           data: {
-            ownerId: user.id,
-            expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
-            members: { create: { userId: user.id, role: 'OWNER' } },
+            ownerId,
+            createdAt: now,
+            expiresAt: new Date(now.getTime() + BOARD_LIFETIME_MS),
             ...(content ? { content: bytes(content) } : {}),
           },
           select: META,
         });
       } catch (err) {
         if (!isUniqueViolation(err)) throw err;
-        const existing: BoardMeta | null = await this.findLiveBoard(clerkId, now);
+        const existing = await findLiveBoard(ownerId, now);
         if (!existing) throw err;
         throw new BoardExistsError(existing);
       }
@@ -55,12 +41,12 @@ export function createPrismaBoardStore(prisma: PrismaClient): BoardStore {
 
     async get(id, now) {
       const row = await prisma.board.findFirst({
-        where: { id, ...live(now) },
-        select: { ...META, owner: { select: { clerkId: true } } },
+        where: { id, expiresAt: { gt: now } },
+        select: { ...META, ownerId: true },
       });
       if (!row) return null;
-      const { owner, ...meta } = row;
-      return { ...meta, ownerClerkId: owner.clerkId };
+      const { ownerId, ...meta } = row;
+      return { ...meta, ownerClerkId: ownerId };
     },
 
     async getContent(id) {

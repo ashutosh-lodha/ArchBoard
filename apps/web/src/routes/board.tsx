@@ -1,7 +1,7 @@
-import { Button, EmptyState, Skeleton, toast } from '@archboard/ui';
+import { Button, EmptyState, Skeleton } from '@archboard/ui';
 import { Clock, Compass, LogIn, TriangleAlert } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Link, useParams } from 'react-router';
 import { SignInButton, useAccount } from '../auth/account.tsx';
 import {
   ApiError,
@@ -11,7 +11,6 @@ import {
   saveBoardContent,
   type ServerBoard,
 } from '../auth/boards-api.ts';
-import { openOrCreateAccountBoard } from '../auth/migrate.ts';
 import { BoardEditor } from '../board/board-editor.tsx';
 import {
   BOARD_LIFETIME_DAYS,
@@ -25,13 +24,13 @@ import {
 import { useBoardDoc, type RemoteSync } from '../board/use-board-doc.ts';
 
 /**
- * /b/:boardId. Two kinds of board:
- *  - account boards (signed in): stored on the server, opened from any device;
- *  - browser-only boards ("local-…"): for visitors who haven't signed in.
+ * /b/:boardId. In production every board belongs to an account and is stored on the server.
+ * Without Clerk configured (local development, tests) boards live in this browser ("local-…").
  */
 export default function BoardPage() {
   const { boardId = '' } = useParams();
-  return isLocalBoardId(boardId) ? (
+  const { enabled } = useAccount();
+  return !enabled && isLocalBoardId(boardId) ? (
     <LocalBoardRoute key={boardId} boardId={boardId} />
   ) : (
     <AccountBoardRoute key={boardId} boardId={boardId} />
@@ -186,34 +185,6 @@ function LocalBoardRoute({ boardId }: { boardId: string }) {
 
 function LocalBoard({ boardId, record }: { boardId: string; record: BoardRecord }) {
   const board = useBoardDoc(boardId);
-  const account = useAccount();
-  const navigate = useNavigate();
-  const moving = useRef(false);
-  const { signedIn, getToken } = account;
-  const ready = Boolean(board?.ready);
-
-  // Signing in moves this browser-only board into the account (if the account has none yet).
-  useEffect(() => {
-    if (!signedIn || !ready || moving.current) return;
-    moving.current = true;
-    openOrCreateAccountBoard(getToken).then(
-      (result) => {
-        if (result.kind === 'created') {
-          toast.success('Board saved to your account');
-          navigate(`/b/${result.board.id}`, { replace: true });
-        } else {
-          toast('Your account already has a board', {
-            description: 'This one stays on this device. Each person has one board at a time.',
-          });
-        }
-      },
-      (err: unknown) => {
-        moving.current = false;
-        toast.error((err as Error).message);
-      },
-    );
-  }, [signedIn, ready, getToken, navigate]);
-
   if (!board || !board.ready) return <BoardSkeleton />;
   return <BoardEditor board={board} record={record} />;
 }

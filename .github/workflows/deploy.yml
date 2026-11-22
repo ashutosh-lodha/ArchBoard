@@ -54,6 +54,10 @@ jobs:
         env:
           VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
         run: |
+          if [ -z "$VM_SSH_KEY" ]; then
+            echo "::error::Add the repository secret VM_SSH_KEY (the deploy user's private key) to enable deploys."
+            exit 1
+          fi
           install -m 700 -d ~/.ssh
           printf '%s\n' "$VM_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
@@ -96,7 +100,8 @@ jobs:
             echo "PUBLIC_ORIGIN=$SITE"
             echo "LOG_LEVEL=info"
             echo "APP_VERSION=${GITHUB_SHA::7}"
-            printf 'CLERK_JWT_KEY=%s\n' "$(printf '%s' "$CLERK_JWT_KEY" | awk 'BEGIN{ORS="\\n"} {print}' | sed 's/\\n$//')"
+            # Env files are one line per value: the PEM goes on one line, the API rebuilds it.
+            echo "CLERK_JWT_KEY=$(printf '%s' "$CLERK_JWT_KEY" | tr -d '\r' | tr '\n' ' ')"
           } > /tmp/app.env
           bash infra/scripts/deploy-api.sh "${{ vars.VM_HOST }}" /tmp/api-image.tar.gz /tmp/app.env
 

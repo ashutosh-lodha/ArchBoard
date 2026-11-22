@@ -1,35 +1,8 @@
-# Local development stack: `docker compose -f infra/compose/compose.dev.yml up`
-# Postgres and Redis are published on localhost only. With `--profile apps`, api and sync also
-# run with hot reload: their dependencies live inside the dev image (Dockerfile.dev) and only the
-# src/ folders are bind-mounted, so containers never modify the host node_modules.
-# The web app runs on the host with `pnpm dev` for the fastest HMR.
+# Local development stack: `pnpm dev:services` starts Postgres (published on localhost only).
+# With `--profile apps`, the API also runs here with hot reload: its dependencies live inside the
+# dev image (Dockerfile.dev) and only src/ folders are bind-mounted, so the container never
+# modifies the host's node_modules. The web app runs on the host with `pnpm dev`.
 name: archboard-dev
-
-x-node-service: &node-service
-  build:
-    context: ../..
-    dockerfile: infra/compose/Dockerfile.dev
-  image: archboard-dev-node
-  working_dir: /repo
-  volumes:
-    - ../../apps/api/src:/repo/apps/api/src:ro
-    - ../../apps/sync/src:/repo/apps/sync/src:ro
-    - ../../packages/shared/src:/repo/packages/shared/src:ro
-    - ../../packages/diagram-schema/src:/repo/packages/diagram-schema/src:ro
-    - ../../packages/protocol/src:/repo/packages/protocol/src:ro
-    - ../../packages/db/src:/repo/packages/db/src:ro
-  environment: &node-env
-    NODE_ENV: development
-    LOG_LEVEL: debug
-    PUBLIC_ORIGIN: http://localhost:5180
-    DATABASE_URL: postgresql://archboard:archboard@postgres:5432/archboard
-    REDIS_URL: redis://redis:6379
-    # Docker Desktop on Windows/macOS does not forward file events into containers: poll instead.
-    CHOKIDAR_USEPOLLING: 'true'
-  depends_on:
-    postgres: { condition: service_healthy }
-    redis: { condition: service_healthy }
-  profiles: [apps]
 
 services:
   postgres:
@@ -47,43 +20,31 @@ services:
       retries: 30
     mem_limit: 384m
 
-  redis:
-    image: redis:7-alpine
-    command:
-      [
-        'redis-server',
-        '--appendonly',
-        'yes',
-        '--maxmemory',
-        '64mb',
-        '--maxmemory-policy',
-        'noeviction',
-      ]
-    ports: ['127.0.0.1:6379:6379']
-    volumes: [redisdata:/data]
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 2s
-      timeout: 3s
-      retries: 30
-    mem_limit: 96m
-
   api:
-    <<: *node-service
+    build:
+      context: ../..
+      dockerfile: infra/compose/Dockerfile.dev
+    image: archboard-dev-api
+    working_dir: /repo
     command: ['pnpm', '--filter', '@archboard/api', 'dev']
+    volumes:
+      - ../../apps/api/src:/repo/apps/api/src:ro
+      - ../../packages/shared/src:/repo/packages/shared/src:ro
+      - ../../packages/diagram-schema/src:/repo/packages/diagram-schema/src:ro
+      - ../../packages/db/src:/repo/packages/db/src:ro
     environment:
-      <<: *node-env
+      NODE_ENV: development
+      LOG_LEVEL: debug
+      PUBLIC_ORIGIN: http://localhost:5180
       API_PORT: '3000'
+      DATABASE_URL: postgresql://archboard:archboard@postgres:5432/archboard
+      CLERK_JWT_KEY: ${CLERK_JWT_KEY:-}
+      # Docker Desktop on Windows/macOS doesn't forward file events into containers: poll instead.
+      CHOKIDAR_USEPOLLING: 'true'
     ports: ['127.0.0.1:3000:3000']
-
-  sync:
-    <<: *node-service
-    command: ['pnpm', '--filter', '@archboard/sync', 'dev']
-    environment:
-      <<: *node-env
-      SYNC_PORT: '4000'
-    ports: ['127.0.0.1:4000:4000']
+    depends_on:
+      postgres: { condition: service_healthy }
+    profiles: [apps]
 
 volumes:
   pgdata:
-  redisdata:

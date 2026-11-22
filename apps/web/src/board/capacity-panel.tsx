@@ -14,7 +14,7 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { LOCAL_ORIGIN } from './use-board-doc.ts';
 
 /**
- * Back-of-the-envelope capacity estimator (UX §5.6). Inputs are saved with the board, results
+ * Back-of-the-envelope capacity estimator. Inputs are saved with the board, results
  * update as you type, every number shows its formula on hover, and the result can be attached
  * to a component (shown on its card) or dropped on the board as a sticky note.
  */

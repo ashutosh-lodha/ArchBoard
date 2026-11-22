@@ -40,7 +40,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expectNoHorizontalScroll(page);
       await expectNoSeriousA11yViolations(page);
       await page.screenshot({
-        path: `../docs/reviews/phase-1/gallery-${info.project.name}-${colorScheme}.png`,
+        path: info.outputPath(`gallery-${info.project.name}-${colorScheme}.png`),
         fullPage: false,
       });
     });

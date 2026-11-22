@@ -67,7 +67,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     );
     expect(serious.map((v) => `${v.id}: ${v.nodes[0]?.target.join(' ')}`)).toEqual([]);
     await page.screenshot({
-      path: `../docs/reviews/phase-2/landing-${info.project.name}-${colorScheme}.png`,
+      path: info.outputPath(`landing-${info.project.name}-${colorScheme}.png`),
       fullPage: true,
     });
   });

@@ -91,3 +91,20 @@ export async function saveBoardContent(
 export async function deleteServerBoard(getToken: GetToken, id: string): Promise<void> {
   await call(getToken, `/boards/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
+
+/** The signed-in person's board, created on first use (one board per account). */
+export async function openOrCreateAccountBoard(
+  getToken: GetToken,
+): Promise<{ board: ServerBoard; created: boolean }> {
+  const existing = await getMyBoard(getToken);
+  if (existing) return { board: existing, created: false };
+  try {
+    return { board: await createServerBoard(getToken), created: true };
+  } catch (err) {
+    // A duplicate request (another tab, a double click) created it a moment ago: use that one.
+    if (!(err instanceof ApiError) || err.status !== 409) throw err;
+    const board = await getMyBoard(getToken);
+    if (!board) throw err;
+    return { board, created: Date.now() - Date.parse(board.createdAt) < 30_000 };
+  }
+}

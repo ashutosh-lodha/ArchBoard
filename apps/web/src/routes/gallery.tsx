@@ -73,7 +73,7 @@ import { useEffect, useId, useState, type ReactNode } from 'react';
 
 /**
  * Design-system gallery (dev only): every core component in light and dark, used for visual
- * regression screenshots and the axe check. Sections mirror docs/UX.md §10.6.
+ * regression screenshots and the axe check.
  */
 export default function GalleryPage() {
   const { resolved, setPreference } = useTheme();

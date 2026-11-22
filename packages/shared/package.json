@@ -5,10 +5,8 @@
   "type": "module",
   "exports": {
     "./errors": "./src/errors.ts",
-    "./ids": "./src/ids.ts",
     "./env": "./src/env.ts",
-    "./logger": "./src/logger.ts",
-    "./storage": "./src/storage/index.ts"
+    "./logger": "./src/logger.ts"
   },
   "scripts": {
     "lint": "eslint .",

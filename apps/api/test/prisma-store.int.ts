@@ -35,7 +35,6 @@ try {
   assert.equal((await store.purgeExpired(new Date(later.getTime() + 8 * 864e5))) >= 1, true);
   console.log('prisma store: all checks passed');
 } finally {
-  await prisma.board.deleteMany({ where: { owner: { clerkId: who } } });
-  await prisma.user.deleteMany({ where: { clerkId: who } });
+  await prisma.board.deleteMany({ where: { ownerId: who } });
   await prisma.$disconnect();
 }

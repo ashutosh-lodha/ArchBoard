@@ -130,7 +130,7 @@ function Hero() {
         </div>
         <ul className="mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-text-muted">
           <li className="inline-flex items-center gap-1.5">
-            <UserRound className="size-4" aria-hidden="true" /> One board per person
+            <UserRound className="size-4" aria-hidden="true" /> One board per account
           </li>
           <li className="inline-flex items-center gap-1.5">
             <Clock className="size-4" aria-hidden="true" /> Deleted after {BOARD_LIFETIME_DAYS} days
@@ -263,7 +263,7 @@ function HowItWorks() {
   const steps = [
     {
       title: 'Start a board',
-      body: 'One click. Sign in to save it to your account, or just try it in your browser. Your board opens with a hint so you never face a blank canvas.',
+      body: 'Sign in and your board opens in one click, with a hint so you never face a blank canvas.',
     },
     {
       title: 'Lay out the system',
@@ -341,21 +341,21 @@ function Rules() {
           intro="ArchBoard is free to use. To keep it that way, boards are short-lived."
         />
         <ul className="grid gap-8 md:grid-cols-2">
-          <Rule icon={<UserRound />} title="One board per person">
-            You can have one board at a time. Starting another means deleting the current one first,
-            and you'll always be asked before anything is deleted.
+          <Rule icon={<UserRound />} title="One board per account">
+            Each account has one board at a time. Starting another means deleting the current one
+            first, and you'll always be asked before anything is deleted.
           </Rule>
           <Rule icon={<Clock />} title={`Deleted after ${BOARD_LIFETIME_DAYS} days`}>
             Boards are deleted automatically {BOARD_LIFETIME_DAYS} days after they're created. The
             board shows how many days are left.
           </Rule>
           <Rule icon={<HardDrive />} title="Saved to your account">
-            Signed in, your board is saved on our server as you work, so it opens on any device. We
-            keep only your account id, never your email or name.
+            Your board is saved on our server as you work, so it opens on any device you sign in on.
+            Unsaved changes are kept in your browser and sent as soon as you're back online.
           </Rule>
-          <Rule icon={<ArrowRight />} title="Try it without an account">
-            Not signed in? Your board is kept in this browser only. Sign in at any point and it
-            moves to your account automatically.
+          <Rule icon={<ArrowRight />} title="Private by default">
+            Only you can open your board. We store your account id and the board itself, never your
+            email or name, and both are gone when the board is deleted.
           </Rule>
         </ul>
       </div>

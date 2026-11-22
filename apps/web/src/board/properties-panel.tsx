@@ -58,7 +58,7 @@ export interface PropertiesPanelProps {
   className?: string;
 }
 
-/** Contextual properties (UX §4.1): shows only what applies to the current selection. */
+/** Contextual properties: shows only what applies to the current selection. */
 export function PropertiesPanel(props: PropertiesPanelProps) {
   const { diagram, selectedNodeIds, selectedEdgeIds } = props;
   const total = selectedNodeIds.length + selectedEdgeIds.length;

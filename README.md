@@ -2,389 +2,365 @@
 
 **The board built for system design interviews.**
 
-Drag in real AWS, Google Cloud and Azure components, wire them up, group them into regions and VPCs, write details on every card, sketch with a pen, and size the system with a built-in capacity calculator, all in your browser.
+Lay out real AWS, Google Cloud and Azure components, connect and group them, write details on every card, sketch with a pen, and size the system with a built-in capacity calculator. Sign in and your board is saved to your account.
 
-**Live:** https://archboard.ashutoshdev.online · **Docs:** [Design](docs/DESIGN.md) · [UX spec](docs/UX.md) · [Plan](docs/PLAN.md) · [Decisions](docs/adr/)
+**Live:** https://archboard.ashutoshdev.online
 
-![The ArchBoard editor with a URL shortener design: clients, load balancer, a URL service inside a VPC with Redis and Postgres, an async analytics pipeline into BigQuery, and the properties panel for the selected cache](docs/images/editor.jpg)
+![The ArchBoard landing page: "The board built for system design interviews", with a framed screenshot of the editor](docs/images/landing.jpg)
 
-> **Board rules:** one board per person at a time, deleted automatically **7 days** after it's created. Boards are saved in your browser. No account is needed.
+> **Board rules:** one board per account, deleted automatically **7 days** after it's created. Only signed-in users can create a board, and only you can open yours.
 
 ---
 
 ## Contents
 
-- [Features](#features)
-- [How it works](#how-it-works)
-  - [System overview](#system-overview)
-  - [Frontend architecture](#frontend-architecture)
-  - [The diagram format](#the-diagram-format)
-  - [Icon pipeline](#icon-pipeline)
-  - [Backend](#backend)
-  - [Planned: real-time collaboration](#planned-real-time-collaboration-pass-the-pen)
-- [Deployment and CI/CD](#deployment-and-cicd)
-- [Quality and testing](#quality-and-testing)
-- [Keyboard shortcuts](#keyboard-shortcuts)
-- [Local development](#local-development)
-- [Repository layout](#repository-layout)
-- [Roadmap](#roadmap)
+1. [Features](#features)
+2. [Architecture at a glance](#architecture-at-a-glance)
+3. [What each technology is used for](#what-each-technology-is-used-for)
+4. [How it works](#how-it-works)
+5. [Hosting and infrastructure](#hosting-and-infrastructure)
+6. [CI/CD](#cicd)
+7. [Security](#security)
+8. [Quality and testing](#quality-and-testing)
+9. [Keyboard shortcuts](#keyboard-shortcuts)
+10. [Local development](#local-development)
+11. [Repository layout](#repository-layout)
 
 ---
 
 ## Features
 
+![The editor with a URL shortener design: clients, load balancer, a URL service inside a VPC with a cache and Postgres, an async analytics pipeline into BigQuery, and the properties panel](docs/images/editor.jpg)
+
 ### 1,193 official architecture icons, found by what you call them
 
-The component panel has every **AWS** (303), **Azure** (643) and **Google Cloud** (226) architecture icon, plus **21 cloud-neutral blocks** drawn for ArchBoard (Load Balancer, Cache, Queue, SQL Database…).
+Every **AWS** (303), **Azure** (643) and **Google Cloud** (226) architecture icon, plus **21 cloud-neutral blocks** (Load Balancer, Cache, Queue, SQL Database…).
 
-- Search understands aliases: `lb`, `elb` and `load balancer` all find the load balancer, `postgres` finds SQL Database, and `pubsub` finds Google Pub/Sub.
+- Search understands aliases: `lb`, `elb` and `load balancer` all find the load balancer, `postgres` finds SQL Database, and `pubsub` finds Pub/Sub.
 - Generic blocks rank first, then the matching provider services, each labelled with its cloud.
-- Tabs filter by provider, and recently used components stay on top.
-- **Click** a component to add it, or **drag** it exactly where you want it.
-- Click-added components chain left to right from the selected one, never overlap, and stay in view.
+- **Click** a component to add it next to the selected one, or **drag** it exactly where you want it.
 
 ![Searching "lb" shows the generic load balancer first, then AWS, Azure and Google Cloud load balancers](docs/images/search.jpg)
 
 ### Connections that say something
 
-- Hover a component to reveal four connection points, then drag to another component to connect them.
-- Every connection can be **sync (solid)** or **async (dashed)**.
-- Add a **protocol tag** (HTTP, gRPC, WebSocket, TCP, Pub/Sub), a label like "writes", and arrows (one way, both or none).
-- Routing is clean and orthogonal, and labels sit on a background pill so they stay readable.
+- Drag between any two components to connect them.
+- Each connection can be **sync (solid)** or **async (dashed)**, with a **protocol tag** (HTTP, gRPC, WebSocket, TCP, Pub/Sub), a label and arrows.
 
-![Selecting the async Pub/Sub connection shows its properties: label, style, protocol and arrows](docs/images/connections.jpg)
+![The async Pub/Sub connection's properties: label, style, protocol and arrows](docs/images/connections.jpg)
 
 ### Regions, VPCs and clusters
 
-- Select components and press **G**, then pick a container type: **Region, Availability zone, VPC, Subnet, Kubernetes cluster** or **Boundary** (keys 1–6).
-- Drag a component onto a group to put it inside; the group lights up as you hover. Drag it out to remove it.
-- Groups resize, rename and nest. **Shift+G** ungroups.
-- Positions are kept relative to the container, so moving a VPC moves everything in it.
+- Select components, press **G**, and pick **Region, Availability zone, VPC, Subnet, Kubernetes cluster** or **Boundary**.
+- Drag a component onto a group to put it inside, or drag it out to remove it. Groups resize, rename and nest.
 
-### A properties panel that only shows what matters
+### Properties that only show what matters
 
-The right-hand panel changes with the selection:
-
-- **A component:** label, replicas (shown as a stacked card with ×3), region, **text on the card**, and private notes.
-- **A connection:** label, style, protocol, arrows.
-- **A group:** name, type, ungroup.
-- **Notes, shapes, text and drawings:** colour, shape type, size, ink.
-- **A multi-selection:** align (6 ways), distribute, group.
-
-For every generic component there's a **"Things to consider"** card with the questions an interviewer is likely to ask: cache eviction and miss storms, queue ordering and dead-letter handling, NoSQL hot partitions, rate-limiter placement, and so on.
+The right-hand panel follows the selection. For components: label, replicas, region, text on the card and private notes. For connections: style, protocol and arrows. For several items: align and distribute. Every generic component also has a **"Things to consider"** card with the follow-up questions an interviewer is likely to ask (cache miss storms, queue ordering, hot partitions…).
 
 ### Back-of-the-envelope capacity estimation
 
-Press **E**. Enter daily active users, reads and writes per user, payload size, retention and peak factor. ArchBoard shows:
+Press **E**, enter daily active users, reads and writes per user, payload size, retention and peak factor, and get **QPS** (average and peak), **storage** and **bandwidth** live. Hover any number to see its formula. **Attach to component** writes the estimate onto a card, and **Add as note** drops it on the board.
 
-- average and peak **read/write QPS**
-- **storage** per year and over the retention period
-- **ingress and egress bandwidth**
+![The capacity calculator showing peak read QPS, yearly storage and bandwidth](docs/images/capacity.jpg)
 
-Hover any number to see its formula. The inputs are saved with the board. **Attach to component** writes the estimate onto the selected card; **Add as note** drops it on the board.
+### Pen, shapes, text and sticky notes
 
-![The capacity calculator next to the design, showing peak read QPS, yearly storage and bandwidth](docs/images/capacity.jpg)
+- **Pen (D):** freehand strokes in 6 inks and 3 widths, kept exactly as drawn.
+- **Shape (R):** box, rounded box, circle, diamond, cylinder or hexagon, with text typed straight inside.
+- **Text (T)** and **sticky notes (N)**.
 
-### Sketch freely: pen, shapes, text and sticky notes
+![A box and a circle with text inside, joined by a hand-drawn arrow](docs/images/drawing.jpg)
 
-- **Pen (D):** freehand strokes in 6 inks and 3 widths. It stays on until you press Esc, and strokes keep exactly the shape you drew.
-- **Shape (R):** drag to draw a box, rounded box, circle, diamond, cylinder or hexagon, and start typing inside straight away.
-- **Text box (T):** click and type.
-- **Sticky notes (N):** in five colours, resizable.
+### Copy, paste, duplicate, undo
 
-![A box and a circle with text inside, joined by a hand-drawn arrow, and a free text box](docs/images/drawing.jpg)
+**Ctrl+C / Ctrl+V** copy items (between boards too), **Ctrl+D** duplicates, and **Ctrl+Z** undoes any action. Every delete shows an **Undo** toast.
 
-### Resizable component cards with text
+### Saved to your account, safe offline
 
-Components aren't just icons. Resize any card and write details on it ("L7, TLS termination, health checks every 5s"), right on the board, using **+ Add text**, a double-click or the properties panel.
+Every change is kept in your browser instantly and saved to your account about a second later. If the connection drops, the header says so and everything is sent when you're back. Open the board on any device you sign in on.
 
-### Never lose work
-
-- Every change **autosaves** to your browser (IndexedDB). The header shows "Saving…" and then "Saved on this device".
-- **Undo/redo** covers every action, and each action is exactly one step.
-- A **Delete** shows an **Undo** toast. Each toast is tied to its own delete, so it can never undo something else.
-- Reloading restores the board exactly, and an existing board opens zoomed to fit.
-
-### Works on desktop, tablet and phone, in light and dark
-
-- On desktop, both side panels are collapsible with **[** and **]**.
-- On tablets the panels become drawers; on phones they become bottom sheets with large touch targets.
-- The light and dark themes are both checked for WCAG AA contrast.
+### Desktop, tablet and phone, light and dark
 
 | Dark theme                                              | Phone                                                                                                         |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | ![The editor in dark mode](docs/images/editor-dark.jpg) | <img src="docs/images/phone.jpg" alt="The editor on a phone, with Add component and the toolbar" width="260"> |
 
-### Clear, simple rules
+---
 
-- **One board per person.** Starting another asks before deleting the current one.
-- **Deleted after 7 days.** A badge on the board counts down the days left.
-- **Saved in your browser:** nothing is uploaded, and clearing site data deletes the board.
-- Opening a board that has expired explains what happened.
+## Architecture at a glance
 
-![The landing page](docs/images/landing.jpg)
+```mermaid
+flowchart LR
+  user(["Visitor's browser"])
+
+  subgraph clerk["Clerk (managed sign-in)"]
+    cfa["clerk.archboard.ashutoshdev.online<br/>sign-in screens and sessions"]
+  end
+
+  subgraph dns["Hostinger DNS"]
+    rec["archboard → static IP<br/>clerk.archboard → Clerk"]
+  end
+
+  subgraph gcp["Google Cloud · project archboard · Mumbai (asia-south1)"]
+    ip["Static IP<br/>archboard-ip"]
+    subgraph vm["VM archboard-vm · e2-small · Ubuntu 24.04"]
+      nginx["nginx<br/>HTTPS (Let's Encrypt)<br/>security headers"]
+      spa[("Built web app<br/>/srv/archboard/current")]
+      subgraph docker["Docker"]
+        api["API<br/>Node.js · Express"]
+        pg[("PostgreSQL 16<br/>boards")]
+      end
+    end
+    snap[("Daily disk snapshots<br/>kept 7 days")]
+  end
+
+  user -- "1 · find the server" --> dns
+  user -- "2 · sign in" --> cfa
+  user -- "3 · HTTPS" --> ip --> nginx
+  nginx -- "static files" --> spa
+  nginx -- "/api/*" --> api
+  api --> pg
+  vm -.-> snap
+```
+
+**In plain words:** your browser downloads the app from our server and signs you in with Clerk. It then talks to our API to load and save your board. The API checks who you are on every request and stores the board in PostgreSQL. Everything runs on one small Google Cloud VM behind nginx.
+
+---
+
+## What each technology is used for
+
+| Layer                      | Technology                    | What it does here                                                                                                 |
+| -------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Web app**                | React 19, TypeScript, Vite    | The editor and landing page. Vite builds them into static files                                                   |
+|                            | React Flow 12                 | The canvas: panning, zooming, nodes, connections, selection                                                       |
+|                            | Yjs                           | The board's data model. Every change is a small "update", and updates from different tabs merge without conflicts |
+|                            | IndexedDB (y-indexeddb)       | Keeps a copy of the board in the browser, so edits are never lost while offline                                   |
+|                            | Tailwind CSS v4, Radix UI     | Design system: light/dark tokens, accessible menus, dialogs and tooltips                                          |
+|                            | Clerk React SDK               | Sign-in modal, user menu, and short-lived session tokens for API calls                                            |
+| **API**                    | Node.js 22, Express 5         | Board endpoints: create, load, save, delete                                                                       |
+|                            | @clerk/backend                | Verifies each request's session token with Clerk's public key, with no network call                               |
+|                            | Zod, Pino                     | Configuration checked at start-up; structured JSON logs with request ids                                          |
+| **Data**                   | PostgreSQL 16, Prisma 7       | One row per board: the owner's Clerk id, the board content (Yjs state) and its expiry date                        |
+| **Edge**                   | nginx                         | HTTPS, HTTP/2, security headers, caching of static files, and the `/api` reverse proxy                            |
+|                            | certbot (Let's Encrypt)       | Free TLS certificates, renewed automatically                                                                      |
+| **Hosting**                | Google Compute Engine         | One e2-small VM in Mumbai with a static IP                                                                        |
+|                            | Docker Compose                | Runs the API and PostgreSQL as containers, with health checks and restart policies                                |
+|                            | Hostinger DNS                 | Points `archboard.ashutoshdev.online` at the VM and `clerk.archboard…` at Clerk                                   |
+| **Infrastructure as code** | Terraform                     | Creates the VM, static IP, firewall rules, snapshot schedule and CI identity                                      |
+| **CI/CD**                  | GitHub Actions                | Tests every change, applies Terraform, builds and deploys                                                         |
+|                            | Workload Identity Federation  | Lets GitHub Actions use Google Cloud with short-lived tokens, with no stored key                                  |
+| **Testing**                | Vitest, fast-check, Supertest | Unit, property-based and API tests                                                                                |
+|                            | Playwright, axe-core          | End-to-end tests at 4 screen sizes, plus accessibility checks                                                     |
 
 ---
 
 ## How it works
 
-### System overview
+### The editor: one source of truth
 
-What runs in production **today**, and the services that are built and tested but not deployed yet:
-
-```mermaid
-flowchart LR
-  subgraph Browser["Your browser"]
-    UI["React SPA<br/>React Flow canvas"]
-    Y["Y.Doc<br/>(diagram state)"]
-    IDB[("IndexedDB<br/>autosave")]
-    UI <--> Y <--> IDB
-  end
-
-  subgraph VM["GCE VM · archboard-vm"]
-    Caddy["Caddy<br/>HTTPS · CSP · caching"]
-    Static[("/srv/archboard/current<br/>built SPA")]
-    Caddy --> Static
-  end
-
-  Browser -- "HTTPS" --> Caddy
-
-  subgraph Next["Built and tested, deployed with collaboration"]
-    API["Express API<br/>health · errors · validation"]
-    Sync["WebSocket sync server<br/>Yjs · pen lease"]
-    PG[("PostgreSQL<br/>Prisma schema")]
-    RD[("Redis<br/>lease · pub/sub")]
-    API --> PG & RD
-    Sync --> PG & RD
-  end
-
-  Caddy -. "/api · /ws (planned)" .-> API & Sync
-```
-
-Boards are local-first. The whole editor runs in the browser, and the VM only serves static files. This keeps the live site fast and cheap, and means a server problem can never lose your board. The API and sync server plug in behind the same Caddy, on the same domain, when collaboration ships.
-
-### Frontend architecture
-
-**Stack:** React 19, Vite, React Router, React Flow 12, Yjs, Tailwind CSS v4, and Radix UI (through our own design system in `packages/ui`), all in strict TypeScript.
-
-The key idea: **the Y.Doc is the single source of truth. React Flow only renders it.**
-
-```mermaid
-flowchart TB
-  subgraph Input["User input"]
-    K["Keyboard shortcuts"]
-    P["Panel: click / drag"]
-    C["Canvas: drag, connect,<br/>resize, rename"]
-    T["Tools: pen, shape, text"]
-  end
-
-  Ops["Diagram operations<br/>packages/diagram-schema/ops<br/>addNode · connect · groupNodes · reparent<br/>deleteElements · align · pasteFragment"]
-  YDoc["Y.Doc<br/>nodes: Map of Y.Map · edges: Map of Y.Map · meta"]
-  Undo["Y.UndoManager<br/>tracks local transactions only"]
-  Persist["y-indexeddb<br/>autosave"]
-  Proj["Projection<br/>Y.Doc → React Flow nodes/edges<br/>coalesced to 1 render per frame,<br/>unchanged objects reused"]
-  RF["React Flow<br/>memoised custom nodes"]
-
-  K & P & C & T --> Ops --> YDoc
-  YDoc --> Undo
-  YDoc --> Persist
-  YDoc -- "observeDeep" --> Proj --> RF
-```
-
-- **Every change goes through a pure, unit-tested operation** in `packages/diagram-schema`, in a single Yjs transaction. One action means one undo step and, later, one network update.
-- **Drags stay local** while you move and write to the document once, on drop. That keeps undo clean and avoids flooding the update log.
-- **The projection** turns the Y.Doc into React Flow's arrays. It batches bursts of changes into one render per animation frame and reuses unchanged node objects, so memoised components don't re-render. It also merges in local-only state such as selection and measured sizes.
-- **The Y.Doc layout** uses field-level maps (`nodes: Map<id, Map<field, value>>`). That's ready for collaboration, where concurrent edits to different fields merge cleanly.
-
-How a save works:
-
-```mermaid
-sequenceDiagram
-  participant U as User
-  participant O as Diagram op
-  participant Y as Y.Doc
-  participant I as IndexedDB
-  participant V as View
-  U->>O: e.g. drop "Redis" on the canvas
-  O->>Y: transact(addNode, origin = LOCAL)
-  Y-->>I: update (autosave)
-  Y-->>V: observeDeep → projection (next frame)
-  V-->>U: node appears, selected, "Saving…" → "Saved on this device"
-```
-
-### The diagram format
-
-One schema, `DiagramV1` in `packages/diagram-schema`, defined with Zod. It's used for templates, JSON import/export, the clipboard and the planned AI generator. Validation reports problems with exact paths, like _"Edge 3 points to a missing node 'db-1'"_. Converting to and from the Y.Doc is **property-tested on 1,000 random diagrams**.
-
-```ts
-{
-  format: 'archboard.diagram', version: 1,
-  meta: { title: 'URL shortener' },
-  nodes: [
-    { id: 'api', kind: 'component', iconId: 'generic/service', label: 'URL service',
-      parentId: 'vpc', position: { x: 32, y: 120 }, size: { width: 216, height: 96 },
-      data: { replicas: 3, description: 'Create short codes, 301 redirects' } },
-    { id: 'vpc', kind: 'group', groupType: 'vpc', label: 'ap-south-1 VPC', … },
-    // also: note, text, shape (6 kinds), drawing (pen strokes)
-  ],
-  edges: [
-    { id: 'e5', source: 'api', target: 'queue', style: 'async', protocol: 'pubsub', arrow: 'end' },
-  ],
-}
-```
-
-### Icon pipeline
-
-Vendor icon packs are **never committed**. A script downloads them from the official pages, verifies a **pinned SHA-256**, and builds a normalised registry that both the search and the planned AI generator use.
+The board lives in a **Yjs document**. The canvas never edits itself. Every action (add, connect, group, delete) is a small, unit-tested operation that changes the document in one transaction, and the canvas re-renders from the document.
 
 ```mermaid
 flowchart LR
-  A["sources.json<br/>official URLs + SHA-256"] --> B["import-icons.ts<br/>download · verify hash<br/>extract SVGs only"]
-  B --> C["vendor/aws · azure · gcp<br/>(git-ignored)"]
-  G["21 generic icons<br/>src/generic.ts"] --> D
-  C --> D["build-registry.ts<br/>normalise names · aliases · SVGO<br/>atomic write"]
-  D --> E["registry.json<br/>id · provider · category · label · aliases · svgPath"]
-  D --> F["optimised SVGs<br/>served at /icons/…"]
-  E --> S["Fuzzy search<br/>exact alias > prefix > word > fuzzy"]
+  input["Your action<br/>click · drag · keyboard"] --> op["Diagram operation<br/>(one transaction)"]
+  op --> ydoc["Yjs document"]
+  ydoc --> view["Canvas re-renders<br/>(at most once per frame)"]
+  ydoc --> undo["Undo history"]
+  ydoc --> idb["Browser copy<br/>(IndexedDB)"]
+  ydoc --> sync["Saved to your account<br/>(~1 s later)"]
 ```
 
-Names keep each vendor's own casing ("AWS IoT SiteWise", "AKS Automatic", "Pub/Sub"). The terms of use for each pack, and how ArchBoard follows them, are in [docs/ICONS.md](docs/ICONS.md).
+That's why undo is exact (one action is one step), why a reload restores the board precisely, and why saving can never corrupt a board.
 
-### Backend
-
-The backend for collaboration is built as tested foundations, ready for the features that need it. Each service follows twelve-factor rules (configuration from the environment, validated at start-up; stateless processes; graceful shutdown).
-
-| Service                                             | What exists today                                                                                                                                                                                                                      | Tests                  |
-| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| **API** (`apps/api`, Express 5)                     | App factory; liveness `/api/health` and readiness `/api/health/ready` (checks Postgres and Redis with a 2 s timeout); request ids; Helmet security headers; RFC 9457 `problem+json` errors that never leak internals; JSON size limits | 8                      |
-| **Sync server** (`apps/sync`, `ws` + Yjs)           | Health endpoints; Origin check on WebSocket upgrade; board-room routing; WebSocket echo for uptime monitors; clean "try again" close on shutdown                                                                                       | 6                      |
-| **Database** (`packages/db`, PostgreSQL + Prisma 7) | Full schema: users, boards, members, invites, guests, an append-only Yjs update log, snapshots, replay events, comments, interview sessions, templates, AI jobs. Versioned migration; idempotent seed; CI fails on schema drift        | migration + seed in CI |
-| **Protocol** (`packages/protocol`)                  | Versioned WebSocket messages validated with Zod on both ends, binary message ids, close codes, and the exact UI text for each failure                                                                                                  | 11                     |
-
-```mermaid
-erDiagram
-  USER ||--o{ BOARD : owns
-  USER ||--o{ BOARD_MEMBER : "is member"
-  BOARD ||--o{ BOARD_MEMBER : has
-  BOARD ||--o{ INVITE : "shared via"
-  INVITE ||--o{ GUEST : admits
-  BOARD ||--o{ BOARD_UPDATE : "append-only Yjs log"
-  BOARD ||--o{ BOARD_SNAPSHOT : "compacted state"
-  BOARD ||--o{ BOARD_EVENT : "replay markers"
-  BOARD ||--o{ COMMENT : has
-  BOARD ||--o{ INTERVIEW_SESSION : runs
-```
-
-### Planned: real-time collaboration ("pass the pen")
-
-Exactly one presenter edits at a time while everyone else watches live, comments and points. The pen is a **lease in Redis** (`SET room:{id}:pen … NX PX 15000`), renewed by the presenter's heartbeat. **The sync server rejects document updates from anyone who doesn't hold the lease**, so the client is never trusted. If the presenter disconnects, the lease expires and the pen returns to the owner.
+### Saving a board
 
 ```mermaid
 sequenceDiagram
-  participant V as Viewer
-  participant S as Sync server
-  participant R as Redis
-  participant P as Presenter
-  V->>S: pen.request
-  S->>P: pen.requested (Accept / Decline)
-  P->>S: pen.respond {accept: true}
-  S->>R: Lua transfer (atomic, fencing epoch++)
-  S-->>V: pen.granted (broadcast to the room)
-  loop every 5 s
-    V->>S: pen.heartbeat → renew lease (PX 15000)
-  end
-  Note over S: updates from non-holders → error PEN_REQUIRED, never persisted or broadcast
+  participant B as Browser
+  participant C as Clerk
+  participant N as nginx
+  participant A as API
+  participant P as PostgreSQL
+  B->>B: Edit applied instantly, copy kept in IndexedDB
+  Note over B: about a second later
+  B->>C: Get a session token (short-lived, cached)
+  B->>N: PUT /api/boards/:id/content (board state + token)
+  N->>A: Proxy to the API container
+  A->>A: Verify the token, check you own this board
+  A->>P: Load stored state, merge, save
+  A-->>B: 204 Saved
+  Note over B: Header shows "Saved to your account"
 ```
 
-The full design (durable write acks, multi-instance fan-out over Redis pub/sub, replay and compaction) is in [docs/DESIGN.md](docs/DESIGN.md).
+**Why merge instead of overwrite?** If the board is open in two tabs, each tab sends its own changes. Yjs merges them on the server, so neither tab can wipe out the other's work.
+
+**If a save fails** (offline, server restart), the browser retries with backoff and shows the status in the header. Nothing is lost, because the browser copy holds every change until the server confirms it.
+
+### Board rules, enforced by the server
+
+| Rule                                    | How it's enforced                                                                                              |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Only signed-in users can create a board | Every API route needs a valid Clerk session token, and the app shows a sign-in screen first                    |
+| One board per account                   | A **unique index** on the owner in PostgreSQL: even two simultaneous requests can't create two boards          |
+| Deleted after 7 days                    | Each board has an `expiresAt` date. Expired boards are hidden at once, and an hourly job deletes them for good |
+| Only you can open your board            | The API checks the owner on every request. Someone else's board id gets the same "not found" as a missing one  |
+
+### The API
+
+| Endpoint                                | What it does                                      |
+| --------------------------------------- | ------------------------------------------------- |
+| `GET /api/me/board`                     | Your board, if you have one                       |
+| `POST /api/boards`                      | Create your board (`409` if you already have one) |
+| `GET /api/boards/:id`                   | Board details (title, created, expires)           |
+| `GET /api/boards/:id/content`           | The board's content                               |
+| `PUT /api/boards/:id/content`           | Save changes (merged on the server)               |
+| `DELETE /api/boards/:id`                | Delete your board                                 |
+| `GET /api/health` · `/api/health/ready` | Liveness, and readiness (checks the database)     |
+
+Errors use the standard `application/problem+json` format with a human-readable message, which the app shows as is.
+
+### Icons
+
+The vendor icon packs are downloaded from the official AWS, Azure and Google pages at build time, checked against a pinned SHA-256 hash, and turned into a search index. They're never committed to the repository. Terms of use: [docs/ICONS.md](docs/ICONS.md).
 
 ---
 
-## Deployment and CI/CD
+## Hosting and infrastructure
+
+Everything lives in its own Google Cloud project (**archboard**) and is defined in Terraform ([infra/terraform](infra/terraform/README.md)).
+
+```mermaid
+flowchart TB
+  subgraph tf["Terraform"]
+    boot["bootstrap layer · applied once by the owner<br/>APIs · service accounts · GitHub identity federation"]
+    main["main layer · applied by GitHub Actions<br/>static IP · firewall · VM · snapshot schedule"]
+  end
+  state[("Terraform state<br/>private, versioned bucket")]
+  boot --> state
+  main --> state
+
+  subgraph vm["archboard-vm, set up by infra/vm/startup.sh"]
+    direction LR
+    n["nginx + certbot"]
+    d["Docker Engine"]
+    u["deploy user<br/>(SSH key only)"]
+    b["nightly database backup<br/>(kept 7 days)"]
+  end
+  main --> vm
+```
+
+| Resource                 | Details                                                                                     | Why                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| VM `archboard-vm`        | e2-small (2 vCPU burst, 2 GB RAM), 20 GB disk, Ubuntu 24.04, Shielded VM                    | Enough for nginx, the API and PostgreSQL, with headroom |
+| Static IP `archboard-ip` | Premium network tier                                                                        | DNS never changes, even if the VM is rebuilt            |
+| Firewall                 | 80/443 open to everyone; 22 for the deploy key only (no password login)                     | Only what the site and deployments need                 |
+| Snapshots                | Daily, kept 7 days                                                                          | Whole-disk recovery, on top of nightly database dumps   |
+| Protection               | Deletion protection; the boot disk survives VM replacement; image updates never recreate it | A configuration mistake can't wipe the database         |
+
+**What the VM runs:** nginx on the host serves the web app and proxies `/api` to the API container, which only the VM itself can reach. PostgreSQL runs in Docker with no public port. Its password is generated on the VM at first boot and never leaves it.
+
+**Cost:** roughly US$20 a month (VM, IP and disk), covered by Google Cloud credits.
+
+---
+
+## CI/CD
 
 ```mermaid
 flowchart LR
-  Dev["git push main"] --> CI
-  subgraph CI["GitHub Actions: CI"]
-    L["lint · typecheck<br/>unit tests"]
-    D["Postgres: migrations<br/>drift check · seed ×2"]
-    E["Playwright + axe<br/>4 viewports × 2 themes"]
+  push["Push to main"] --> ci
+  subgraph ci["CI · every push and pull request"]
+    direction TB
+    c1["Lint · typecheck · unit tests<br/>dependency audit"]
+    c2["Real PostgreSQL: migrations,<br/>drift check, seed, storage test"]
+    c3["Terraform fmt + validate"]
+    c4["Playwright + axe<br/>4 screen sizes × 2 themes"]
   end
-  CI -- "all green" --> Deploy
-  subgraph Deploy["GitHub Actions: Deploy"]
-    B["build SPA<br/>import icon packs"] --> U["scp release<br/>to deploy@VM"]
-    U --> S["atomic symlink switch<br/>keep last 5 releases"]
-    S --> H["smoke test<br/>https://archboard…"]
+  ci -- "all green" --> deploy
+  subgraph deploy["Deploy"]
+    direction TB
+    d1["Build web app + API image"] --> d2["API: upload, migrate, swap container<br/>(automatic rollback if unhealthy)"]
+    d2 --> d3["Web: upload, switch atomically<br/>(last 5 releases kept)"]
+    d3 --> d4["Smoke test over HTTPS"]
   end
-  Deploy --> VM["GCE VM<br/>Caddy · auto HTTPS"]
+  infra["Infrastructure workflow<br/>Terraform plan on PRs, apply on main"]
 ```
 
-- **The VM** (`infra/vm/startup.sh`) installs Caddy and sets up a `deploy` user with no sudo except one helper: validate a new Caddy config and apply it only if it's valid. It also adds swap and unattended security upgrades.
-- **Caddy** (`infra/caddy/Caddyfile`) provides automatic Let's Encrypt certificates, a strict **Content-Security-Policy** with no inline scripts, HSTS and other security headers, immutable caching for hashed assets, and the single-page-app fallback.
-- **Releases are atomic.** Each one is unpacked into its own folder, and a symlink switch makes it live with no half-deployed state. **Rollback:** run the Deploy workflow with `rollback` (`infra/scripts/rollback-web.sh`).
-- **Secrets** (`VM_HOST`, `VM_SSH_KEY`) live in GitHub's encrypted secrets. Nothing secret is in the repository; see `.env.example`.
+- **Zero-downtime web releases:** each release goes into its own folder, and a symlink switch makes it live in one step.
+- **Safe API releases:** database migrations run first. If the new container doesn't pass its health check within 90 seconds, the previous image is restored automatically.
+- **One-click rollback:** run the Deploy workflow with _rollback_ ticked to restore the previous web release and API image.
+- **Keyless cloud access:** the infrastructure workflow uses Workload Identity Federation. Only this repository can use it, and its service account can manage Compute Engine but can't change permissions.
+
+**Configuration** lives in GitHub repository variables, all of them public values: the VM's IP, the Clerk publishable key, the Clerk JWT public key and the GCP identifiers. The only secret is `VM_SSH_KEY`, the deploy user's private key.
+
+---
+
+## Security
+
+- **Authentication:** Clerk handles sign-in. The API checks each session token's signature, expiry and origin with Clerk's public key.
+- **Authorisation:** every board request checks ownership, and other people's boards look exactly like missing ones.
+- **Privacy:** only the Clerk user id is stored, never your email or name. Deleting a board deletes everything stored about it.
+- **Transport:** HTTPS only, with HSTS and HTTP/2. `www` redirects to the main domain.
+- **Browser hardening:** a strict Content-Security-Policy with no inline scripts (only our code and Clerk's sign-in scripts can run), `nosniff`, a strict referrer policy and `frame-ancestors 'none'`.
+- **Input limits:** board content must be a valid Yjs document and is capped at 2 MB.
+- **Least privilege:** the VM's deploy user can run exactly two root helpers: apply a validated nginx config, and deploy or roll back the API. CI's cloud identity can't grant itself permissions.
+- **Supply chain:** exact dependency versions, a production dependency audit in CI, and icon packs verified by SHA-256.
 
 ---
 
 ## Quality and testing
 
-| Layer         | Tooling             | What's covered                                                                                                                                                                                                                                                                                                                                                                     |
-| ------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unit          | Vitest, fast-check  | Diagram ops (grouping keeps on-screen positions, cascading delete, paste remapping, align/distribute, undo integration), schema validation with path-specific errors, 1,000-case round-trip property test, capacity maths against hand-computed values, icon search ranking on the real packs, board policy (create, one-at-a-time, expiry), protocol parsing, storage path safety |
-| API           | Supertest           | Health/readiness, timeouts, security headers, problem+json errors, no leaked internals                                                                                                                                                                                                                                                                                             |
-| End-to-end    | Playwright          | Every core journey at **375, 768, 1024 and 1440 px**: build LB → Service → DB and connect, rename, reload; undo from the keyboard and from the toast; drag from the panel; groups and drag in/out; properties; connection styles; pen fidelity (saved stroke equals the live preview within 2 px); shapes and text; capacity calculator; Google Cloud search; landing page         |
-| Accessibility | axe-core            | 0 serious/critical WCAG 2.1 AA violations on the landing page, the board and the design system, in light and dark; keyboard reachability                                                                                                                                                                                                                                           |
-| Database      | Real Postgres in CI | Migrations from scratch, no schema drift, idempotent seed                                                                                                                                                                                                                                                                                                                          |
-| Supply chain  | `pnpm audit`        | Production dependencies clean; versions pinned exactly                                                                                                                                                                                                                                                                                                                             |
-
-**Totals:** 126 unit/API tests and 78 end-to-end checks, all green.
+| Layer          | Tools                                     | Covers                                                                                                                                                                                         |
+| -------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit           | Vitest, fast-check                        | Diagram operations, schema validation (1,000-case round-trip property test), capacity maths, icon search ranking, board policy                                                                 |
+| API            | Supertest                                 | Sign-in required, one board per account, ownership checks, merging concurrent saves, invalid content, 7-day expiry, token checks (wrong origin, expired, forged)                               |
+| Database       | Real PostgreSQL in CI                     | Migrations from scratch, no schema drift, idempotent seed, concurrent-create race                                                                                                              |
+| End-to-end     | Playwright                                | Build, connect, rename and reload; undo; drag and drop; groups; properties; connection styles; pen fidelity; shapes and text; capacity calculator; landing page, at 375, 768, 1024 and 1440 px |
+| Accessibility  | axe-core                                  | No serious or critical WCAG 2.1 AA violations, in light and dark                                                                                                                               |
+| Infrastructure | Terraform validate, `bash -n`, `nginx -t` | Both Terraform layers, every shell script, and the nginx config before every reload                                                                                                            |
 
 ---
 
 ## Keyboard shortcuts
 
-| Action                             | Keys                                          |
-| ---------------------------------- | --------------------------------------------- |
-| Search components                  | `/`                                           |
-| Select · Pen · Shape · Text box    | `V` · `D` · `R` · `T` (`O` jumps to a circle) |
-| Sticky note                        | `N`                                           |
-| Capacity estimate                  | `E`                                           |
-| Group · Ungroup                    | `G` then `1–6` · `Shift+G`                    |
-| Rename selection                   | `Enter` / `F2`                                |
-| Delete                             | `Delete` / `Backspace` (undoable)             |
-| Undo · Redo                        | `Ctrl+Z` · `Ctrl+Shift+Z` (or `Ctrl+Y`)       |
-| Multi-select                       | `Shift`-click or drag a box                   |
-| Toggle side panels                 | `[` · `]`                                     |
-| Back out (menu → tool → selection) | `Esc`                                         |
+| Action                          | Keys                                     |
+| ------------------------------- | ---------------------------------------- |
+| Search components               | `/`                                      |
+| Select · Pen · Shape · Text     | `V` · `D` · `R` · `T` (`O` for a circle) |
+| Sticky note · Capacity estimate | `N` · `E`                                |
+| Group · Ungroup                 | `G` then `1–6` · `Shift+G`               |
+| Copy · Paste · Duplicate        | `Ctrl+C` · `Ctrl+V` · `Ctrl+D`           |
+| Undo · Redo                     | `Ctrl+Z` · `Ctrl+Shift+Z`                |
+| Rename · Delete                 | `Enter` · `Delete`                       |
+| Toggle side panels              | `[` · `]`                                |
+| Back out                        | `Esc`                                    |
 
 ---
 
 ## Local development
 
-Prerequisites: Node 22+, pnpm 9, Docker.
+Prerequisites: Node 22, pnpm 9, Docker.
 
 ```bash
-pnpm install                          # also generates the Prisma client
-cp .env.example .env                  # local defaults work as-is
-pnpm --filter @archboard/icons build  # generic icons (add vendor packs: pnpm icons:import)
-pnpm dev                              # web app on http://localhost:5180
+pnpm install
+cp .env.example .env
+pnpm --filter @archboard/icons build   # cloud-neutral icons (all vendor packs: pnpm icons:import)
+pnpm dev                               # http://localhost:5180
 ```
 
-The editor works with just that. To run the backend services too:
+Without Clerk keys, the editor runs in **browser-only mode**: no sign-in, and the board is kept in your browser. To run the API too:
 
 ```bash
-pnpm dev:services        # Postgres + Redis in Docker (localhost only)
+pnpm dev:services                      # PostgreSQL in Docker (localhost only)
 pnpm db:migrate && pnpm db:seed
-docker compose -f infra/compose/compose.dev.yml --profile apps up   # API + sync with hot reload
+pnpm --filter @archboard/api dev       # needs CLERK_JWT_KEY in .env
 ```
-
-The Docker dev image keeps dependencies inside the image and mounts only `src/` folders, so containers never touch your local `node_modules`.
 
 Checks:
 
 ```bash
-pnpm lint && pnpm typecheck && pnpm test   # everything, via Turborepo
-pnpm test:e2e                              # Playwright + axe (first time: pnpm --filter @archboard/e2e exec playwright install chromium)
+pnpm lint && pnpm typecheck && pnpm test
+pnpm test:e2e
 ```
 
 ---
@@ -393,40 +369,29 @@ pnpm test:e2e                              # Playwright + axe (first time: pnpm 
 
 ```
 apps/
-  web/     React SPA: landing page, editor (board/), routes
-  api/     Express REST API
-  sync/    WebSocket + Yjs sync server
+  web/              React app: landing page, editor, sign-in
+  api/              Express API: board storage, auth, expiry job
 packages/
-  diagram-schema/  DiagramV1 schema, Y.Doc converters, diagram operations, capacity maths
-  protocol/        versioned WebSocket messages and close codes
-  db/              Prisma schema, migrations, seed
-  icons/           icon registry, search, vendor pack importer
-  ui/              design tokens and components (Tailwind v4 + Radix)
-  shared/          errors, env loading, logging, storage
-  config/          TypeScript, ESLint and Prettier presets
+  diagram-schema/   Board format, Yjs conversion, diagram operations, capacity maths
+  db/               Prisma schema, migration, seed
+  icons/            Icon registry, search, vendor pack importer
+  ui/               Design tokens and components
+  shared/           Errors, config loading, logging
+  config/           TypeScript, ESLint and Prettier presets
 infra/
-  caddy/  vm/  scripts/  compose/      production edge, VM bootstrap, deploy/rollback, dev stack
-e2e/       Playwright end-to-end and accessibility tests
-docs/      design, UX spec, plan, ADRs, icon terms, reviews
+  terraform/        Google Cloud infrastructure (bootstrap + main layers)
+  vm/               VM start-up script (nginx, certbot, Docker, deploy user, backups)
+  nginx/            Production nginx config and security headers
+  docker/           Production API image
+  stack/            Production Docker Compose (API + PostgreSQL)
+  scripts/          Deploy and rollback
+  compose/          Local development stack
+e2e/                Playwright end-to-end and accessibility tests
+docs/               Icon terms, architecture decision records, screenshots
 ```
 
----
-
-## Roadmap
-
-| Status | Feature                                                                                                   |
-| ------ | --------------------------------------------------------------------------------------------------------- |
-| ✅     | Editor: components, connections, groups, properties, pen/shapes/text, capacity calculator, autosave, undo |
-| ✅     | 1,193 official AWS / Azure / Google Cloud icons with alias search                                         |
-| ✅     | Landing page, production deployment pipeline, CI/CD                                                       |
-| ⏳     | Sign-in, sharing, and boards stored on the server                                                         |
-| ⏳     | **Pass the pen:** live collaboration with a server-enforced presenter lease                               |
-| ⏳     | Interview mode: phased timer, requirements checklist, roles                                               |
-| ⏳     | Session replay, templates, PNG/SVG export, JSON import                                                    |
-| ⏳     | Generate a diagram from a prompt (LLM with structured output and auto-layout)                             |
-
-Design decisions are recorded as ADRs: [Yjs vs OT](docs/adr/001-yjs-vs-ot.md) · [Postgres vs MongoDB](docs/adr/003-postgres-vs-mongodb.md) · [React Flow vs a custom canvas](docs/adr/006-react-flow-vs-custom-canvas.md).
+Design decisions: [Yjs vs OT](docs/adr/001-yjs-vs-ot.md) · [PostgreSQL vs MongoDB](docs/adr/003-postgres-vs-mongodb.md) · [React Flow vs a custom canvas](docs/adr/006-react-flow-vs-custom-canvas.md).
 
 ---
 
-Built by Ashutosh Lodha. AWS, Google Cloud and Azure icons are trademarks of their respective owners and are used under their published terms ([docs/ICONS.md](docs/ICONS.md)).
+Built by Ashutosh Lodha. AWS, Google Cloud and Azure icons are trademarks of their respective owners, used under their published terms ([docs/ICONS.md](docs/ICONS.md)).

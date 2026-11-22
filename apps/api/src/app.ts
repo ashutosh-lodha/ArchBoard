@@ -6,7 +6,7 @@ import { isAppError, NotFoundError } from '@archboard/shared/errors';
 import type { Logger } from '@archboard/shared/logger';
 import { boardRoutes, type BoardRouteDeps } from './boards/routes.ts';
 
-/** A named dependency check for the readiness probe (database, Redis, …). */
+/** A named dependency check for the readiness probe (e.g. the database). */
 export type HealthCheck = () => Promise<void>;
 
 export interface AppDeps {

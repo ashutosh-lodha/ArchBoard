@@ -10,7 +10,7 @@ const iconsDir = resolve(here, '../../packages/icons/generated/svg');
 
 /**
  * Serve the generated icon SVGs at /icons/* in dev and copy them into dist/icons at build.
- * Icons are long-cache static assets; Caddy sets immutable caching in production.
+ * Icons are long-cache static assets; nginx sets immutable caching in production.
  */
 function iconsPlugin(): Plugin {
   return {
@@ -41,10 +41,7 @@ export default defineConfig({
   server: {
     port: 5180,
     strictPort: true,
-    proxy: {
-      '/api': 'http://localhost:3000',
-      '/ws': { target: 'ws://localhost:4000', ws: true },
-    },
+    proxy: { '/api': 'http://localhost:3000' },
   },
   build: {
     target: 'es2022',

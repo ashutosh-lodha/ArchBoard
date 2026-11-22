@@ -1,7 +1,6 @@
 /**
- * Development seed: one sample user with two boards whose content is stored as an initial
- * Yjs snapshot, exactly as the sync server will store it. Idempotent (safe to re-run).
- * Templates are seeded in Phase 5.
+ * Development seed: one sample board (a URL shortener), stored as Yjs state exactly as the API
+ * stores it. Idempotent (safe to re-run).
  */
 import * as Y from 'yjs';
 import { parseDiagram, toYDoc, type DiagramV1 } from '@archboard/diagram-schema';
@@ -63,47 +62,22 @@ const urlShortener: DiagramV1 = parseDiagram({
   ],
 });
 
-const blank: DiagramV1 = parseDiagram({
-  format: 'archboard.diagram',
-  version: 1,
-  meta: { title: 'Blank board (seed)' },
-  nodes: [],
-  edges: [],
-});
-
-async function seedBoard(ownerId: string, id: string, diagram: DiagramV1): Promise<void> {
-  // Copy into a plain ArrayBuffer-backed array (Prisma's Bytes type rejects SharedArrayBuffer views).
-  const state = new Uint8Array(Y.encodeStateAsUpdate(toYDoc(diagram)));
+async function main(): Promise<void> {
+  // Copy into a plain ArrayBuffer-backed array (Prisma's Bytes type rejects other views).
+  const content = new Uint8Array(Y.encodeStateAsUpdate(toYDoc(urlShortener)));
   await prisma.board.upsert({
-    where: { id },
+    where: { ownerId: 'user_seed' },
     update: {},
     create: {
-      id,
-      ownerId,
-      title: diagram.meta.title,
-      content: state,
-      members: { create: { userId: ownerId, role: 'OWNER' } },
-      snapshots: { create: { upToSeq: 0n, sizeBytes: state.byteLength, data: state } },
+      id: 'seed-url-shortener',
+      ownerId: 'user_seed',
+      title: urlShortener.meta.title,
+      content,
+      // Seed data shouldn't expire during a dev session.
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
   });
-}
-
-async function main(): Promise<void> {
-  const user = await prisma.user.upsert({
-    where: { clerkId: 'seed_user' },
-    update: {},
-    create: { clerkId: 'seed_user', name: 'Seed User', email: null },
-  });
-  await seedBoard(user.id, 'seed-url-shortener', urlShortener);
-  // Board policy: one board per person, so the blank board belongs to a second seed user.
-  const second = await prisma.user.upsert({
-    where: { clerkId: 'seed_user_2' },
-    update: {},
-    create: { clerkId: 'seed_user_2', name: 'Seed User 2', email: null },
-  });
-  await seedBoard(second.id, 'seed-blank', blank);
-  const boards = await prisma.board.count();
-  console.log(`Seeded: user ${user.id}, ${boards} board(s) in total.`);
+  console.log(`Seeded: ${await prisma.board.count()} board(s) in total.`);
 }
 
 main()

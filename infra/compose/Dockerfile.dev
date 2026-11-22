@@ -1,4 +1,4 @@
-# Development image for apps/api and apps/sync.
+# Development image for apps/api.
 # Dependencies are installed INSIDE the image (Linux binaries, own node_modules), and compose
 # bind-mounts only the src/ folders for hot reload, so containers never touch the host's
 # node_modules. Rebuild when dependencies change: `docker compose ... build`.
@@ -10,13 +10,11 @@ WORKDIR /repo
 # Manifests first, for layer caching. Every workspace manifest is copied so the lockfile matches.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/api/package.json apps/api/
-COPY apps/sync/package.json apps/sync/
 COPY apps/web/package.json apps/web/
 COPY e2e/package.json e2e/
 COPY packages/config/package.json packages/config/
 COPY packages/shared/package.json packages/shared/
 COPY packages/diagram-schema/package.json packages/diagram-schema/
-COPY packages/protocol/package.json packages/protocol/
 COPY packages/icons/package.json packages/icons/
 COPY packages/ui/package.json packages/ui/
 COPY packages/db/package.json packages/db/prisma.config.ts packages/db/
@@ -25,10 +23,9 @@ COPY packages/db/prisma packages/db/prisma
 # Only what api and sync need (and their workspace dependencies). Retries help on flaky networks.
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm-store \
     pnpm config set store-dir /pnpm-store && \
-    pnpm install --frozen-lockfile --filter "@archboard/api..." --filter "@archboard/sync..." \
+    pnpm install --frozen-lockfile --filter "@archboard/api..." \
       --network-concurrency 8 --fetch-retries 5
 
 # Config the apps need at runtime (tsconfig/eslint are not used by tsx, but keep imports resolvable).
 COPY packages/config packages/config
 COPY apps/api/tsconfig.json apps/api/
-COPY apps/sync/tsconfig.json apps/sync/

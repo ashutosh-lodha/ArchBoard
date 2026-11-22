@@ -1,13 +1,13 @@
 # ADR-006: React Flow for the canvas instead of a custom canvas or a whiteboard engine
 
-- Status: Accepted (Phase 1, to be confirmed by the Phase 2 performance budget)
+- Status: Accepted
 - Date: 2026-11-21
 
 ## Context
 The editor is a node-and-edge diagram tool, not a freehand whiteboard. It needs:
 - drag, handles, connections, smooth-step edges with labels, nested groups, a minimap, zoom and pan
 - keyboard accessibility and touch gestures
-- 60 fps with 300+ nodes while remote updates arrive
+- 60 fps with 300+ nodes
 - clean, deterministic SVG export
 
 ## Options
@@ -21,5 +21,5 @@ Use **React Flow**. Keep it behind our own projection layer: React Flow renders,
 ## Consequences
 - ✅ Nodes are ordinary React components: tooltips, focus rings, ARIA and theming come from `packages/ui`.
 - ✅ Export comes straight from the DOM/SVG.
-- ⚠️ DOM nodes cost more than canvas pixels. Mitigations: memoised node and edge components, per-frame coalescing of remote updates, viewport culling, icons as cached images. Phase 2 measures 300, 500 and 1,000 node boards and records the results in `docs/PERFORMANCE.md`. If the budget can't be met, this ADR is revisited.
-- ⚠️ Version choice: React Flow 13 is the current major. Phase 2 pins whichever major passes the perf harness.
+- ⚠️ DOM nodes cost more than canvas pixels. Mitigations: memoised node and edge components, re-rendering at most once per animation frame, viewport culling, and icons as cached images.
+- ⚠️ Pinned to React Flow 12.12.1 (exact version), upgraded deliberately.
